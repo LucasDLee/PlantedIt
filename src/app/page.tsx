@@ -1,7 +1,13 @@
+import Footer from "@/src/components/footer";
+import Header from "@/src/components/header";
+import MainContent from "@/src/components/main-content";
+
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <p>home</p>
+    <div>
+      <Header />
+      <MainContent />
+      <Footer />
     </div>
   );
 }
