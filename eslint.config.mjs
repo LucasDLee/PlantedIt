@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "no-duplicate-imports": "error",
+      "no-unused-vars": "warn",
+      "use-isnan": "error",
       "sort-imports": "error",
       "sort-keys": [
         "error",

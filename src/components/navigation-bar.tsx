@@ -10,6 +10,10 @@ export default function NavigationBar() {
     {
       href: "/pages/map",
       name: "Map"
+    },
+    {
+      href: "/pages/plantlist",
+      name: "Plant List"
     }
   ]
 
@@ -17,9 +21,6 @@ export default function NavigationBar() {
     <nav>
       <ul>
         {urls.map((val, id) => <li key={id}><Link href={val.href}>{val.name}</Link></li>)}
-        <li>
-          <Link href=""></Link>
-        </li>
       </ul>
     </nav>
   )
