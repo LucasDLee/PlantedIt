@@ -5,5 +5,5 @@ export default function Header() {
     <header>
       <NavigationBar />
     </header>
-  )
+  );
 }

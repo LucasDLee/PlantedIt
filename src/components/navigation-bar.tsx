@@ -8,20 +8,24 @@ interface NavLink {
 export default function NavigationBar() {
   const urls: NavLink[] = [
     {
-      href: "/pages/map",
+      href: "/",
+      name: "Home"
+    },
+    {
+      href: "/map",
       name: "Map"
     },
     {
-      href: "/pages/plantlist",
+      href: "/plantlist",
       name: "Plant List"
     }
-  ]
+  ];
 
   return (
     <nav>
-      <ul>
+      <ul className="bg-sky-950 gap-4 flex flex-row list-none">
         {urls.map((val, id) => <li key={id}><Link href={val.href}>{val.name}</Link></li>)}
       </ul>
     </nav>
-  )
+  );
 }
