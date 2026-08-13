@@ -18,12 +18,16 @@ export default function NavigationBar() {
     {
       href: "/plantlist",
       name: "Plant List"
+    },
+    {
+      href: "/contact",
+      name: "Contact"
     }
   ];
 
   return (
-    <nav>
-      <ul className="bg-sky-950 gap-4 flex flex-row list-none">
+    <nav className="bg-sky-950 flex justify-center rounded-b-3xl w-full">
+      <ul className="items-center gap-4 flex flex-row list-none p-3">
         {urls.map((val, id) => <li key={id}><Link href={val.href}>{val.name}</Link></li>)}
       </ul>
     </nav>
