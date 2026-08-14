@@ -2,21 +2,34 @@
 
 import L, { type LatLngExpression } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
+import { type NominatimResult, reverseGeocode } from '@/src/api/nominatim';
 import { useEffect, useState } from 'react';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Child component that listens for map clicks and reports them up
+
 function LocationMarker({
   position,
-  setPosition
+  setPosition,
+  setAddress
 }: {
   position: LatLngExpression;
   setPosition: (pos: LatLngExpression) => void;
+  setAddress: (data: NominatimResult | null) => void;
 }) {
   useMapEvents({
-    click(e) {
-      setPosition([e.latlng.lat, e.latlng.lng]);
+    async click(e) {
+      const { lat, lng } = e.latlng;
+      setPosition([lat, lng]);
+
+      try {
+        const data = await reverseGeocode(lat, lng);
+        setAddress(data);
+      } catch (err) {
+        console.error(err);
+        setAddress(null);
+      }
     }
   });
 
@@ -40,6 +53,7 @@ export default function Map() {
   }, []);
 
   const [position, setPosition] = useState<LatLngExpression>([0.0, 0.0]);
+  const [address, setAddress] = useState<NominatimResult | null>(null);
 
   return (
     <MapContainer center={position} zoom={13} style={{ height: '400px', width: '100%' }}>
@@ -47,7 +61,7 @@ export default function Map() {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; OpenStreetMap contributors'
       />
-      <LocationMarker position={position} setPosition={setPosition} />
+      <LocationMarker position={position} setPosition={setPosition} setAddress={setAddress} />
     </MapContainer>
   );
 }
