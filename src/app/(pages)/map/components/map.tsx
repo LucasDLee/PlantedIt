@@ -3,6 +3,7 @@
 import L, { type LatLngExpression } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
 import { type NominatimResult, reverseGeocode } from '@/src/api/nominatim';
+import { type SavedLocation, getSavedLocations, saveLocation } from '@/src/lib/storage/locations';
 import { useEffect, useState } from 'react';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -26,6 +27,15 @@ function LocationMarker({
       try {
         const data = await reverseGeocode(lat, lng);
         setAddress(data);
+
+        // Save immediately on click
+        const entry: SavedLocation = {
+          address: data,
+          lat,
+          lng,
+          savedAt: new Date().toISOString()
+        };
+        // saveLocation(entry);
       } catch (err) {
         console.error(err);
         setAddress(null);
@@ -56,12 +66,26 @@ export default function Map() {
   const [address, setAddress] = useState<NominatimResult | null>(null);
 
   return (
-    <MapContainer center={position} zoom={13} style={{ height: '400px', width: '100%' }}>
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; OpenStreetMap contributors'
-      />
-      <LocationMarker position={position} setPosition={setPosition} setAddress={setAddress} />
-    </MapContainer>
+    <div>
+      <MapContainer center={position} zoom={13} style={{ height: '400px', width: '100%' }}>
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap contributors'
+        />
+        <LocationMarker position={position} setPosition={setPosition} setAddress={setAddress} />
+      </MapContainer>
+
+      {address && (
+        <div style={{ marginTop: '1rem' }}>
+          <p>{address.display_name}</p>
+        </div>
+      )}
+
+      <ul>
+        {getSavedLocations().map((loc, i) => (
+          <li key={i}>{loc.address.display_name}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
