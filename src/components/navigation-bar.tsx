@@ -11,17 +11,21 @@ export default function NavigationBar() {
       href: "/",
       name: "Home"
     },
-    {
-      href: "/map",
-      name: "Map"
-    },
+    // {
+    //   href: "/map",
+    //   name: "Map"
+    // },
     {
       href: "/plantlist",
       name: "Plant List"
     },
     {
-      href: "/contact",
-      name: "Contact"
+      href: "/weather",
+      name: "Weather"
+    },
+    {
+      href: "/about",
+      name: "About"
     }
   ];
 

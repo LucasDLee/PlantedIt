@@ -1,7 +1,10 @@
+import Header from "@/src/components/header";
+
 export default function WeatherData() {
   return (
-    <div className="flex-col flex flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+    <>
+      <Header />
       <p>weather</p>
-    </div>
+    </>
   );
 }
