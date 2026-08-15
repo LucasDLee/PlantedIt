@@ -35,7 +35,7 @@ function LocationMarker({
           lng,
           savedAt: new Date().toISOString()
         };
-        // saveLocation(entry);
+        saveLocation(entry);
       } catch (err) {
         console.error(err);
         setAddress(null);

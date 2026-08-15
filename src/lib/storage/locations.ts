@@ -1,9 +1,9 @@
 import type { NominatimResult } from '@/src/api/nominatim';
 
 export interface SavedLocation {
+  address: NominatimResult;
   lat: number;
   lng: number;
-  address: NominatimResult;
   savedAt: string; // ISO timestamp
 }
 
@@ -25,9 +25,10 @@ export function getSavedLocations(): SavedLocation[] {
 
 export function saveLocation(location: SavedLocation): SavedLocation[] {
   const current = getSavedLocations();
+  console.log(location)
   const updated = [...current, location];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  return updated;
+  // localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  // return updated;
 }
 
 export function clearSavedLocations(): void {

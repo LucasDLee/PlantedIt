@@ -1,17 +1,17 @@
 export interface NominatimAddress {
-  road?: string;
+  [key: string]: string | undefined;
   city?: string;
-  state?: string;
-  postcode?: string;
   country?: string;
   country_code?: string;
-  [key: string]: string | undefined;
+  postcode?: string;
+  road?: string;
+  state?: string;
 }
 
 export interface NominatimResult {
-  display_name: string;
-  address: Record<string, string>;
   [key: string]: unknown;
+  address: Record<string, string>;
+  display_name: string;
 }
 
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
