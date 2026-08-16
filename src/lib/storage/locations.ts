@@ -1,19 +1,38 @@
-import type { NominatimResult } from '@/src/api/nominatim';
+import type { NominatimResponse } from '@/src/api/nominatim';
 
 export interface SavedLocation {
-  address: NominatimResult;
+  data: NominatimResponse;
   lat: number;
   lng: number;
   savedAt: string; // ISO timestamp
 }
 
 const STORAGE_KEY = 'saved-locations';
+export const LOCATION_EVENT = 'saved-locations-changed';
+
+function notifyChange() {
+  window.dispatchEvent(new Event(LOCATION_EVENT));
+}
 
 export function getMostRecentLocation(): SavedLocation {
   const dummyLocation: SavedLocation = {
-    address: {
-      error: 'Unable to geocode'
-    } as unknown as NominatimResult,
+    data: {
+      address: {},
+      addresstype: '',
+      boundingbox: ['0', '0', '0', '0'],
+      class: '',
+      display_name: 'Unable to geocode',
+      importance: 0,
+      lat: '0',
+      licence: '',
+      lon: '0',
+      name: '',
+      osm_id: 0,
+      osm_type: '',
+      place_id: 0,
+      place_rank: 0,
+      type: ''
+    },
     lat: 0,
     lng: 0,
     savedAt: new Date().toISOString()
@@ -58,11 +77,10 @@ export function getSavedLocations(): SavedLocation[] {
 
 export function saveLocation(location: SavedLocation): SavedLocation[] {
   const current = getSavedLocations();
-  console.log(location)
   const updated = [...current, location];
-  console.log(updated)
-  // localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  // return updated;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  notifyChange();
+  return updated;
 }
 
 export function clearSavedLocations(): void {

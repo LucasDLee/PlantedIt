@@ -2,7 +2,7 @@
 
 import L, { type LatLngExpression } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
-import { type NominatimResult, reverseGeocode } from '@/src/api/nominatim';
+import { NominatimAddress, reverseGeocode } from '@/src/api/nominatim';
 import { type SavedLocation, getSavedLocations, saveLocation } from '@/src/lib/storage/locations';
 import { useEffect, useState } from 'react';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -17,7 +17,7 @@ function LocationMarker({
 }: {
   position: LatLngExpression;
   setPosition: (pos: LatLngExpression) => void;
-  setAddress: (data: NominatimResult | null) => void;
+  setAddress: (data: NominatimAddress | null) => void;
 }) {
   useMapEvents({
     async click(e) {
@@ -30,7 +30,7 @@ function LocationMarker({
 
         // Save immediately on click
         const entry: SavedLocation = {
-          address: data,
+          data: data,
           lat,
           lng,
           savedAt: new Date().toISOString()
@@ -63,7 +63,7 @@ export default function Map() {
   }, []);
 
   const [position, setPosition] = useState<LatLngExpression>([0.0, 0.0]);
-  const [address, setAddress] = useState<NominatimResult | null>(null);
+  const [address, setAddress] = useState<NominatimAddress | null>(null);
 
   return (
     <div>
@@ -75,17 +75,17 @@ export default function Map() {
         <LocationMarker position={position} setPosition={setPosition} setAddress={setAddress} />
       </MapContainer>
 
-      {address && (
+      {/* {address && (
         <div style={{ marginTop: '1rem' }}>
           <p>{address.display_name}</p>
         </div>
-      )}
+      )} */}
 
-      <ul>
+      {/* <ul>
         {getSavedLocations().map((loc, i) => (
-          <li key={i}>{loc.address.display_name}</li>
+          <li key={i}>{loc.data.display_name}</li>
         ))}
-      </ul>
+      </ul> */}
     </div>
   );
 }
