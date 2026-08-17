@@ -1,6 +1,7 @@
 'use client';
 
 import Header from "@/src/components/header";
+import LocationDescriptor from "./(pages)/components/location-descriptor";
 import dynamic from 'next/dynamic';
 // import Footer from "@/src/components/footer";
 // import MainContent from "@/src/components/main-content";
@@ -17,7 +18,7 @@ export default function Home() {
       <div className="grid grid-cols-2">
         <Map />
         <section>
-          <p>Country Icon | City | District | Country</p> {/* Nominatim */}
+          <LocationDescriptor />
           <p>Latitude Longitude</p> {/* Nominatim */}
           <p>USDA Zone</p> {/* Coords.zone */}
           <p>Local Zone</p> {/* Coords.zone */}

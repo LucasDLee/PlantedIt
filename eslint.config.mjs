@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextTs from "eslint-config-next/typescript";
 import nextVitals from "eslint-config-next/core-web-vitals";
+import perfectionist from "eslint-plugin-perfectionist";
 import stylistic  from "@stylistic/eslint-plugin";
 
 const eslintConfig = defineConfig([
@@ -16,7 +17,8 @@ const eslintConfig = defineConfig([
   ]),
   {
     plugins: {
-      "@stylistic": stylistic
+      "@stylistic": stylistic,
+      "perfectionist": perfectionist
     },
     rules: {
       "@stylistic/comma-dangle": "error",
@@ -24,6 +26,7 @@ const eslintConfig = defineConfig([
       "@stylistic/semi": "error",
       "no-duplicate-imports": "error",
       "no-unused-vars": "warn",
+      "perfectionist/sort-interfaces": ["error"],
       "sort-imports": "error",
       "sort-keys": [
         "error",
