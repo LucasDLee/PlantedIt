@@ -1,20 +1,43 @@
 import { LOCATION_EVENT, SavedLocation, getMostRecentLocation } from "@/src/lib/storage/locations";
-import { useEffect, useMemo, useState } from "react";
-import { NominatimAddress } from "@/src/api/nominatim";
+import { useEffect, useState } from "react";
+
+const DUMMY_LOCATION: SavedLocation = {
+  data: {
+    address: {},
+    addresstype: '',
+    boundingbox: ['0', '0', '0', '0'],
+    class: '',
+    display_name: 'Unable to geocode',
+    importance: 0,
+    lat: '0',
+    licence: '',
+    lon: '0',
+    name: '',
+    osm_id: 0,
+    osm_type: '',
+    place_id: 0,
+    place_rank: 0,
+    type: ''
+  },
+  lat: 0,
+  lng: 0,
+  savedAt: new Date(0).toISOString()
+};
 
 export default function LocationDescriptor() {
-  // bump a counter whenever storage changes, to trigger a re-read
-  const [version, setVersion] = useState(0);
+  const [location, setLocation] = useState<SavedLocation>(DUMMY_LOCATION);
 
   useEffect(() => {
-    const refresh = () => setVersion((v) => v + 1);
+    const refresh = () => setLocation(getMostRecentLocation());
+
+    refresh(); // read real data only after mount
 
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === 'saved-locations') refresh();
     };
 
-    window.addEventListener('storage', handleStorageChange); // other tabs
-    window.addEventListener(LOCATION_EVENT, refresh);         // same tab
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener(LOCATION_EVENT, refresh);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -22,18 +45,10 @@ export default function LocationDescriptor() {
     };
   }, []);
 
-  const location: SavedLocation = useMemo(
-    () => getMostRecentLocation(),
-    [version]
-  );
-
-  // console.log(typeof(location));
-  // console.log(location);
-
   const address = location.data.address;
-  console.log(address);
+  // console.log(address);
 
-  const countryCode = address?.country_code ?? "";
+  const countryCode: string = address?.country_code ?? "";
   const cityName: string =
     address?.city ??
     address?.town ??
