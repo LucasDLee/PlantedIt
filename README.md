@@ -23,3 +23,7 @@ AI was only used to give advice on the tech stack, and troubleshoot and diagnose
 
 - [NextJS](https://nextjs.org/): Can bind third-party APIs into local cached data to limit API load
 - [Tailwind CSS](https://tailwindcss.com/): CSS framework
+
+### Miscellaneous
+
+- [Circle Flags](https://github.com/HatScripts/circle-flags): Country flags

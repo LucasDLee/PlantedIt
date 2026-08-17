@@ -1,3 +1,4 @@
+import { DUMMY_LOCATION } from '@/src/constants/geocoding';
 import type { NominatimResponse } from '@/src/api/nominatim';
 
 export interface SavedLocation {
@@ -15,39 +16,17 @@ function notifyChange() {
 }
 
 export function getMostRecentLocation(): SavedLocation {
-  const dummyLocation: SavedLocation = {
-    data: {
-      address: {},
-      addresstype: '',
-      boundingbox: ['0', '0', '0', '0'],
-      class: '',
-      display_name: 'Unable to geocode',
-      importance: 0,
-      lat: '0',
-      licence: '',
-      lon: '0',
-      name: '',
-      osm_id: 0,
-      osm_type: '',
-      place_id: 0,
-      place_rank: 0,
-      type: ''
-    },
-    lat: 0,
-    lng: 0,
-    savedAt: new Date().toISOString()
-  };
 
-  if (typeof window === 'undefined') return dummyLocation; // guard for SSR
+  if (typeof window === 'undefined') return DUMMY_LOCATION; // guard for SSR
 
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return dummyLocation;
+  if (!raw) return DUMMY_LOCATION;
 
   try {
     const listLocation = JSON.parse(raw) as SavedLocation[];
 
     if (!Array.isArray(listLocation) || listLocation.length === 0) {
-      return dummyLocation;
+      return DUMMY_LOCATION;
     }
 
     const mostRecent = [...listLocation].sort(
@@ -57,7 +36,7 @@ export function getMostRecentLocation(): SavedLocation {
     return mostRecent;
   } catch (err) {
     console.error('Failed to get most recent location', err);
-    return dummyLocation;
+    return DUMMY_LOCATION;
   }
 }
 
