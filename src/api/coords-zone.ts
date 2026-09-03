@@ -39,6 +39,14 @@ class CoordsZoneError extends Error {
   }
 }
 
+function getApiKey(): string {
+  const key = process.env.COORDS_ZONE_API_KEY;
+  if (!key) {
+    throw new Error("Missing COORDS_ZONE_API_KEY environment variable");
+  }
+  return key;
+}
+
 async function fetchCoordsZone<T>(
   endpoint: CoordsZoneEndpoint,
   lat: number,
@@ -49,7 +57,11 @@ async function fetchCoordsZone<T>(
 
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${getApiKey()}`
+      }
+    });
   } catch (err) {
     throw new CoordsZoneError(endpoint, "network error", err);
   }
