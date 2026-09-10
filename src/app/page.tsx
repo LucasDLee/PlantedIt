@@ -2,9 +2,8 @@
 
 import Header from "@/src/components/header";
 import LocationDescriptor from "./(pages)/components/location-descriptor";
+import ZoneDescriptor from "./(pages)/components/zone-descriptor";
 import dynamic from 'next/dynamic';
-// import Footer from "@/src/components/footer";
-// import MainContent from "@/src/components/main-content";
 
 const Map = dynamic(() => import("./(pages)/map/components/map"), {
   loading: () => <p>Loading map...</p>,
@@ -20,8 +19,7 @@ export default function Home() {
         <section>
           <LocationDescriptor />
           <p>Latitude Longitude</p> {/* Nominatim */}
-          <p>USDA Zone</p> {/* Coords.zone */}
-          <p>Local Zone</p> {/* Coords.zone */}
+          <ZoneDescriptor />
         </section>
       </div>
       <div>
