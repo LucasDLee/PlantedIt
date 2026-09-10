@@ -1,4 +1,4 @@
-const COORDS_ZONE_BASE_URL = "https://coords.zone/api/v1";
+const COORDS_ZONE_BASE_URL = "/api/coords-zone";
 
 type CoordsZoneEndpoint = "zone" | "country" | "climate";
 
@@ -54,12 +54,14 @@ async function fetchCoordsZone<T>(
 ): Promise<T> {
   const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
   const url = `${COORDS_ZONE_BASE_URL}/${endpoint}?${params}`;
+  console.log(url)
+  console.log(process.env.NEXT_PUBLIC_COORDS_ZONE_API_KEY)
 
   let res: Response;
   try {
     res = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${getApiKey()}`
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_COORDS_ZONE_API_KEY}`
       }
     });
   } catch (err) {
