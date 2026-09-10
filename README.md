@@ -10,7 +10,7 @@ AI was only used to give advice on the tech stack, and troubleshoot and diagnose
 ### API Fetching
 
 - [Open Meteo](https://open-meteo.com/en/docs): Weather and location data
-- [Perenual](https://perenual.com/docs/api): Plant encyclopedia
+- [Plant Solve](https://www.plantsolve.com/): Plant encyclopedia
 - [GBIF API](https://techdocs.gbif.org/en/openapi/)
 - [Coords Zone](https://coords.zone/): USDA Plant Hardiness Zones
 - [OpenStreetMap Nominatim](https://nominatim.org/release-docs/develop/api/Overview/): For location geocoding

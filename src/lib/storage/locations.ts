@@ -1,5 +1,5 @@
 import { DUMMY_LOCATION } from '@/src/constants/geocoding';
-import type { NominatimResponse } from '@/src/api/nominatim';
+import type { NominatimResponse } from '@/src/app/api/nominatim';
 
 export interface SavedLocation {
   data: NominatimResponse;

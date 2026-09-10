@@ -6,7 +6,7 @@ import { type SavedLocation, saveLocation } from '@/src/lib/storage/locations';
 import { useEffect, useState } from 'react';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import { reverseGeocode } from '@/src/api/nominatim';
+import { reverseGeocode } from '@/src/app/api/nominatim';
 
 // Child component that listens for map clicks and reports them up
 
@@ -24,6 +24,9 @@ function LocationMarker({
 
       try {
         const data = await reverseGeocode(lat, lng);
+        const test = await fetch(`/api/plants/african-violet`);
+
+        console.log(await test.json());
 
         // Save immediately on click
         const entry: SavedLocation = {
