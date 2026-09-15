@@ -1,4 +1,4 @@
-const COORDS_ZONE_BASE_URL = "/api/coords-zone";
+const COORDS_ZONE_BASE_URL = "api";
 
 type CoordsZoneEndpoint = "zone" | "country" | "climate";
 
@@ -39,14 +39,6 @@ class CoordsZoneError extends Error {
   }
 }
 
-function getApiKey(): string {
-  const key = process.env.COORDS_ZONE_API_KEY;
-  if (!key) {
-    throw new Error("Missing COORDS_ZONE_API_KEY environment variable");
-  }
-  return key;
-}
-
 async function fetchCoordsZone<T>(
   endpoint: CoordsZoneEndpoint,
   lat: number,
@@ -54,8 +46,6 @@ async function fetchCoordsZone<T>(
 ): Promise<T> {
   const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
   const url = `${COORDS_ZONE_BASE_URL}/${endpoint}?${params}`;
-  console.log(url)
-  console.log(process.env.NEXT_PUBLIC_COORDS_ZONE_API_KEY)
 
   let res: Response;
   try {

@@ -4,9 +4,12 @@ import L, { type LatLngExpression } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
 import { type SavedLocation, saveLocation } from '@/src/lib/storage/locations';
 import { useEffect, useState } from 'react';
+import { getZone } from '@/src/app/api/coords-zone';
 import icon from 'leaflet/dist/images/marker-icon.png';
+import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { reverseGeocode } from '@/src/app/api/nominatim';
+import { saveZone } from '@/src/lib/storage/zone';
 
 // Child component that listens for map clicks and reports them up
 
@@ -24,9 +27,7 @@ function LocationMarker({
 
       try {
         const data = await reverseGeocode(lat, lng);
-        const test = await fetch(`/api/zone?lat=${lat}&lng=${lng}`);
-
-        console.log(await test.json());
+        const zone = await getZone(lat, lng);
 
         // Save immediately on click
         const entry: SavedLocation = {
@@ -35,7 +36,8 @@ function LocationMarker({
           lng,
           savedAt: new Date().toISOString()
         };
-        saveLocation(entry);
+        // saveLocation(entry);
+        // saveZone(zone);
       } catch (err) {
         console.error(err);
       }
@@ -56,6 +58,7 @@ export default function Map() {
   useEffect(() => {
     delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
     L.Icon.Default.mergeOptions({
+      iconRetinaUrl: iconRetina.src ?? iconRetina,
       iconUrl: icon.src ?? icon,
       shadowUrl: iconShadow.src ?? iconShadow
     });

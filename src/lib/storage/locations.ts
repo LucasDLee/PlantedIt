@@ -8,6 +8,11 @@ export interface SavedLocation {
   savedAt: string; // ISO timestamp
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 const STORAGE_KEY = 'saved-locations';
 export const LOCATION_EVENT = 'saved-locations-changed';
 
@@ -15,7 +20,26 @@ function notifyChange() {
   window.dispatchEvent(new Event(LOCATION_EVENT));
 }
 
-export function getMostRecentLocation(): SavedLocation {
+function postLatitudeLongitude(lat: number, lng: number): void {
+  const data: Coordinates = {
+    lat: lat,
+    lng: lng
+  };
+  localStorage.setItem("coordinates", JSON.stringify(data));
+}
+
+function getLatitudeLongitude(): Coordinates {
+  const data = localStorage.getItem("coordinates");
+
+  try {
+    const json = JSON.parse(data) as Coordinates;
+    return json;
+  } catch(err) {
+    console.error(err);
+  }
+}
+
+function getMostRecentLocation(): SavedLocation {
 
   if (typeof window === 'undefined') return DUMMY_LOCATION; // guard for SSR
 
@@ -40,7 +64,7 @@ export function getMostRecentLocation(): SavedLocation {
   }
 }
 
-export function getSavedLocations(): SavedLocation[] {
+function getSavedLocations(): SavedLocation[] {
   if (typeof window === 'undefined') return []; // guard for SSR
 
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -54,7 +78,7 @@ export function getSavedLocations(): SavedLocation[] {
   }
 }
 
-export function saveLocation(location: SavedLocation): SavedLocation[] {
+function saveLocation(location: SavedLocation): SavedLocation[] {
   const current = getSavedLocations();
   const updated = [...current, location];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -62,6 +86,8 @@ export function saveLocation(location: SavedLocation): SavedLocation[] {
   return updated;
 }
 
-export function clearSavedLocations(): void {
+function clearSavedLocations(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
+
+export { clearSavedLocations, saveLocation, getMostRecentLocation, getSavedLocations };
