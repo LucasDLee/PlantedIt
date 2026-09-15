@@ -24,7 +24,7 @@ function LocationMarker({
 
       try {
         const data = await reverseGeocode(lat, lng);
-        const test = await fetch(`/api/plants/african-violet`);
+        const test = await fetch(`/api/zone?lat=${lat}&lng=${lng}`);
 
         console.log(await test.json());
 

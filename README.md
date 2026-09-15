@@ -27,3 +27,9 @@ AI was only used to give advice on the tech stack, and troubleshoot and diagnose
 ### Miscellaneous
 
 - [Circle Flags](https://github.com/HatScripts/circle-flags): Country flags
+
+### Datasets
+
+- https://www.kaggle.com/datasets/aribashafaqat/plants-growth-and-care-recommendations
+- https://www.kaggle.com/datasets/ilyaryabov/full-descriptions-of-900-flowers-flower-database
+- https://github.com/cwfrazier1/openplantdb
