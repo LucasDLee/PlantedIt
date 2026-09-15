@@ -21,21 +21,29 @@ function notifyChange() {
 }
 
 function postLatitudeLongitude(lat: number, lng: number): void {
-  const data: Coordinates = {
-    lat: lat,
-    lng: lng
-  };
+  const data: Coordinates = { lat, lng };
   localStorage.setItem("coordinates", JSON.stringify(data));
 }
 
-function getLatitudeLongitude(): Coordinates {
+function getLatitudeLongitude(): Coordinates | null {
   const data = localStorage.getItem("coordinates");
+  if (data === null) return null;
 
   try {
-    const json = JSON.parse(data) as Coordinates;
-    return json;
-  } catch(err) {
+    const parsed = JSON.parse(data);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      typeof parsed.lat === "number" &&
+      typeof parsed.lng === "number"
+    ) {
+      return parsed as Coordinates;
+    }
+    console.error("Stored coordinates have unexpected shape:", parsed);
+    return null;
+  } catch (err) {
     console.error(err);
+    return null;
   }
 }
 
