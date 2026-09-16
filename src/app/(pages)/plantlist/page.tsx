@@ -1,6 +1,9 @@
 import Header from "@/src/components/header";
+import { getAllFlowers } from "@/src/services/flowers.service";
 
-export default function PlantList() {
+export default async function PlantList() {
+  const flowers = await getAllFlowers();
+  console.log(flowers);
   return (
     <>
       <Header />
