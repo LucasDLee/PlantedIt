@@ -15,7 +15,7 @@ const getAllFlowers = unstable_cache(
     return data;
   },
   ["flowers-all"],
-  { revalidate: revalidationTime, tags: ["flowers"] }
+  { revalidate: revalidationTime, tags: [databaseName] }
 );
 
 const selectFlower = unstable_cache(
@@ -30,21 +30,21 @@ const selectFlower = unstable_cache(
     return data;
   },
   ["flower-by-id"],
-  { revalidate: revalidationTime, tags: ["flowers"] }
+  { revalidate: revalidationTime, tags: [databaseName] }
 );
 
 const organizeFlowerGroup = unstable_cache(
-  async (group: string) => {
+  async (columnName: string, group: string) => {
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from(databaseName)
       .select()
-      .eq("flower_group", group.toLowerCase());
+      .eq(columnName, group.toLowerCase());
     if (error) throw new Error(error.message);
     return data;
   },
   ["flowers-by-group"],
-  { revalidate: revalidationTime, tags: ["flowers"] }
+  { revalidate: revalidationTime, tags: [databaseName] }
 );
 
 export { getAllFlowers, selectFlower, organizeFlowerGroup };
