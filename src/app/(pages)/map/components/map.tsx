@@ -2,7 +2,8 @@
 
 import L, { type LatLngExpression } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
-import { type SavedLocation, saveLocation } from '@/src/lib/storage/locations';
+import { type SavedLocation, getLocation, saveLocation } from '@/src/lib/storage/locations';
+import { DUMMY_LOCATION } from '@/src/constants/geocoding';
 import { getZone } from '@/src/app/api/coords-zone';
 import { reverseGeocode } from '@/src/app/api/nominatim';
 import { saveZone } from '@/src/lib/storage/zone';
@@ -69,8 +70,11 @@ function LocationMarker({
 }
 
 export default function Map() {
-  const [position, setPosition] = useState<[number, number] | null>(null);
-  const initialCenter: LatLngExpression = [20, 0];
+  const [position, setPosition] = useState<[number, number] | null>(() => {
+    const saved = getLocation();
+    return saved === DUMMY_LOCATION ? null : [saved.lat, saved.lng];
+  });
+  const [initialCenter] = useState<LatLngExpression>(() => position ?? [20, 0]);
 
   return (
     <div className="relative h-full w-full">
@@ -81,7 +85,7 @@ export default function Map() {
           </p>
         </div>
       )}
-      <MapContainer center={initialCenter} zoom={2} worldCopyJump style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={initialCenter} zoom={position ? 6 : 2} worldCopyJump style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap contributors'
