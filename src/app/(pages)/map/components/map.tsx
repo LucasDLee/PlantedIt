@@ -3,10 +3,22 @@
 import L, { type LatLngExpression } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
 import { type SavedLocation, saveLocation } from '@/src/lib/storage/locations';
-import { useEffect, useState } from 'react';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import { reverseGeocode } from '@/src/api/nominatim';
+import { getZone } from '@/src/app/api/coords-zone';
+import { reverseGeocode } from '@/src/app/api/nominatim';
+import { saveZone } from '@/src/lib/storage/zone';
+import { useState } from 'react';
+
+// Flat pin in the app's primary green (replaces Leaflet's shaded default marker)
+const pinIcon = L.divIcon({
+  className: 'flat-pin',
+  html: `<svg viewBox="0 0 28 36" width="28" height="36" aria-hidden="true">
+    <path d="M14 0C6.3 0 0 6.1 0 13.6 0 23.8 14 36 14 36s14-12.2 14-22.4C28 6.1 21.7 0 14 0z" fill="#1f7a45"/>
+    <circle cx="14" cy="13.5" r="5" fill="#ffffff"/>
+  </svg>`,
+  iconAnchor: [14, 36],
+  iconSize: [28, 36],
+  popupAnchor: [0, -32]
+});
 
 // Child component that listens for map clicks and reports them up
 
@@ -14,8 +26,8 @@ function LocationMarker({
   position,
   setPosition
 }: {
-  position: LatLngExpression;
-  setPosition: (pos: LatLngExpression) => void;
+  position: [number, number] | null;
+  setPosition: (pos: [number, number]) => void;
 }) {
   useMapEvents({
     async click(e) {
@@ -24,6 +36,7 @@ function LocationMarker({
 
       try {
         const data = await reverseGeocode(lat, lng);
+        const zone = await getZone(lat, lng);
 
         // Save immediately on click
         const entry: SavedLocation = {
@@ -32,37 +45,39 @@ function LocationMarker({
           lng,
           savedAt: new Date().toISOString()
         };
-        saveLocation(entry);
+        // saveLocation(entry);
+        // saveZone(zone);
       } catch (err) {
         console.error(err);
       }
     }
   });
 
+  if (!position) return null;
+
   return (
-    <Marker position={position}>
+    <Marker position={position} icon={pinIcon}>
       <Popup>
-        Lat: {(position as [number, number])[0].toFixed(5)}, Lng:{' '}
-        {(position as [number, number])[1].toFixed(5)}
+        Lat: {position[0].toFixed(5)}, Lng: {position[1].toFixed(5)}
       </Popup>
     </Marker>
   );
 }
 
 export default function Map() {
-  useEffect(() => {
-    delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconUrl: icon.src ?? icon,
-      shadowUrl: iconShadow.src ?? iconShadow
-    });
-  }, []);
-
-  const [position, setPosition] = useState<LatLngExpression>([0.0, 0.0]);
+  const [position, setPosition] = useState<[number, number] | null>(null);
+  const initialCenter: LatLngExpression = [20, 0];
 
   return (
-    <div>
-      <MapContainer center={position} zoom={13} style={{ height: '400px', width: '100%' }}>
+    <div className="relative h-full w-full">
+      {!position && (
+        <div className="pointer-events-none absolute right-4 top-4 z-[1000]">
+          <p className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-on-primary">
+            Click anywhere to drop a pin
+          </p>
+        </div>
+      )}
+      <MapContainer center={initialCenter} zoom={2} worldCopyJump style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap contributors'

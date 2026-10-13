@@ -1,4 +1,7 @@
+'use client';
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface NavLink {
   href: string;
@@ -6,6 +9,8 @@ interface NavLink {
 }
 
 export default function NavigationBar() {
+  const pathname = usePathname();
+
   const urls: NavLink[] = [
     {
       href: "/",
@@ -30,9 +35,26 @@ export default function NavigationBar() {
   ];
 
   return (
-    <nav className="bg-sky-950 flex justify-center rounded-b-3xl w-full">
-      <ul className="items-center gap-4 flex flex-row list-none p-3">
-        {urls.map((val, id) => <li key={id}><Link href={val.href}>{val.name}</Link></li>)}
+    <nav>
+      <ul className="flex flex-wrap items-center gap-1 text-sm font-medium">
+        {urls.map((val, id) => {
+          const active = val.href === "/" ? pathname === "/" : pathname.startsWith(val.href);
+          return (
+            <li key={id}>
+              <Link
+                href={val.href}
+                aria-current={active ? "page" : undefined}
+                className={`block rounded-md px-3 py-2 transition-colors ${
+                  active
+                    ? "bg-tint text-primary-strong"
+                    : "text-muted hover:bg-surface hover:text-primary-strong"
+                }`}
+              >
+                {val.name}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

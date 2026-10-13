@@ -1,26 +1,73 @@
 @import "tailwindcss";
 
+/* Light monochromatic green palette — flat, no shadows or gradients */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #10301c;
+  --surface: #f2f8f3;
+  --tint: #e2f0e5;
+  --line: #cfe4d4;
+  --muted: #4f6e59;
+  --primary: #1f7a45;
+  --primary-strong: #155c33;
+  --on-primary: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-tint: var(--tint);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-on-primary: var(--on-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Flatten Leaflet's default controls */
+.leaflet-container {
+  background: var(--tint);
+  font-family: inherit;
+}
+
+.leaflet-bar,
+.leaflet-touch .leaflet-bar {
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.leaflet-bar a,
+.leaflet-touch .leaflet-bar a {
+  background: var(--background);
+  border-bottom-color: var(--line);
+  color: var(--primary-strong);
+}
+
+.leaflet-bar a:hover {
+  background: var(--tint);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  box-shadow: none;
+}
+
+.leaflet-popup-content-wrapper {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.flat-pin {
+  background: none;
+  border: none;
 }
