@@ -34,21 +34,25 @@ function LocationMarker({
       const { lat, lng } = e.latlng;
       setPosition([lat, lng]);
 
-      try {
-        const data = await reverseGeocode(lat, lng);
-        const zone = await getZone(lat, lng);
+      // Save immediately on click; location and zone are independent so one failing doesn't block the other
+      const [geocode, zone] = await Promise.allSettled([reverseGeocode(lat, lng), getZone(lat, lng)]);
 
-        // Save immediately on click
+      if (geocode.status === 'fulfilled') {
         const entry: SavedLocation = {
-          data: data,
+          data: geocode.value,
           lat,
           lng,
           savedAt: new Date().toISOString()
         };
-        // saveLocation(entry);
-        // saveZone(zone);
-      } catch (err) {
-        console.error(err);
+        saveLocation(entry);
+      } else {
+        console.error(geocode.reason);
+      }
+
+      if (zone.status === 'fulfilled') {
+        saveZone(zone.value);
+      } else {
+        console.error(zone.reason);
       }
     }
   });
@@ -90,12 +94,6 @@ export default function Map() {
           <p>{address.display_name}</p>
         </div>
       )} */}
-
-      {/* <ul>
-        {getSavedLocations().map((loc, i) => (
-          <li key={i}>{loc.data.display_name}</li>
-        ))}
-      </ul> */}
     </div>
   );
 }

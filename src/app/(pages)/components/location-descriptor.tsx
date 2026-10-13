@@ -1,4 +1,4 @@
-import { LOCATION_EVENT, SavedLocation, getMostRecentLocation } from "@/src/lib/storage/locations";
+import { LOCATION_EVENT, SavedLocation, getLocation } from "@/src/lib/storage/locations";
 import { useEffect, useState } from "react";
 import Card from "@/src/components/card";
 import { DUMMY_LOCATION } from "@/src/constants/geocoding";
@@ -11,12 +11,12 @@ export default function LocationDescriptor() {
   const [location, setLocation] = useState<SavedLocation>(DUMMY_LOCATION);
 
   useEffect(() => {
-    const refresh = () => setLocation(getMostRecentLocation());
+    const refresh = () => setLocation(getLocation());
 
     refresh(); // read real data only after mount
 
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'saved-locations') refresh();
+      if (event.key === 'saved-location') refresh();
     };
 
     window.addEventListener('storage', handleStorageChange);

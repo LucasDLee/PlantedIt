@@ -1,4 +1,4 @@
-const COORDS_ZONE_BASE_URL = "api";
+const COORDS_ZONE_BASE_URL = "/api";
 
 type CoordsZoneEndpoint = "zone" | "country" | "climate";
 

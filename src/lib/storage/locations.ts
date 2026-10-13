@@ -13,8 +13,9 @@ export interface Coordinates {
   lng: number;
 }
 
-const STORAGE_KEY = 'saved-locations';
-export const LOCATION_EVENT = 'saved-locations-changed';
+const STORAGE_KEY = 'saved-location';
+const LEGACY_STORAGE_KEY = 'saved-locations'; // old array format, removed on next save
+export const LOCATION_EVENT = 'saved-location-changed';
 
 function notifyChange() {
   window.dispatchEvent(new Event(LOCATION_EVENT));
@@ -47,55 +48,29 @@ function getLatitudeLongitude(): Coordinates | null {
   }
 }
 
-function getMostRecentLocation(): SavedLocation {
-
+function getLocation(): SavedLocation {
   if (typeof window === 'undefined') return DUMMY_LOCATION; // guard for SSR
 
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return DUMMY_LOCATION;
 
   try {
-    const listLocation = JSON.parse(raw) as SavedLocation[];
-
-    if (!Array.isArray(listLocation) || listLocation.length === 0) {
-      return DUMMY_LOCATION;
-    }
-
-    const mostRecent = [...listLocation].sort(
-      (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
-    )[0];
-
-    return mostRecent;
+    return JSON.parse(raw) as SavedLocation;
   } catch (err) {
-    console.error('Failed to get most recent location', err);
+    console.error('Failed to parse saved location:', err);
     return DUMMY_LOCATION;
   }
 }
 
-function getSavedLocations(): SavedLocation[] {
-  if (typeof window === 'undefined') return []; // guard for SSR
-
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-
-  try {
-    return JSON.parse(raw) as SavedLocation[];
-  } catch (err) {
-    console.error('Failed to parse saved locations:', err);
-    return [];
-  }
-}
-
-function saveLocation(location: SavedLocation): SavedLocation[] {
-  const current = getSavedLocations();
-  const updated = [...current, location];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+function saveLocation(location: SavedLocation): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
   notifyChange();
-  return updated;
 }
 
-function clearSavedLocations(): void {
+function clearLocation(): void {
   localStorage.removeItem(STORAGE_KEY);
+  notifyChange();
 }
 
-export { clearSavedLocations, saveLocation, getMostRecentLocation, getSavedLocations };
+export { clearLocation, saveLocation, getLocation };
