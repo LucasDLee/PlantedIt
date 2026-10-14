@@ -5,7 +5,7 @@ export interface Flower {
   flower_color: string | null;
   flower_group: string | null;
   flower_name: string;
-  hardiness_rank: number | null;
+  hardiness_zone: string | null;
   life_cycle: string | null;
   minimum_cold_hardiness: string | null;
   plant_height: string | null;

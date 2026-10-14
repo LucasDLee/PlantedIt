@@ -1,6 +1,6 @@
 'use client';
 
-import { type Facet, type FacetKey, formatOption, zoneRank } from "../facets";
+import { type Facet, type FacetKey, formatOption, matchesZone } from "../facets";
 import PlantCard, { type Flower } from "./plant-card";
 import PlantFilterPanel, { type Selection } from "./plant-filter-panel";
 import { useMemo, useState } from "react";
@@ -27,12 +27,11 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
   // Search and hardiness narrow the pool every facet counts from
   const base = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const maxRank = hardiness ? zoneRank(hardiness) : null;
     return flowers.filter((flower) =>
       (!q ||
         flower.flower_name.toLowerCase().includes(q) ||
         (flower.flower_group ?? "").toLowerCase().includes(q)) &&
-      (maxRank === null || (flower.hardiness_rank !== null && flower.hardiness_rank <= maxRank))
+      (!hardiness || matchesZone(flower.hardiness_zone, hardiness))
     );
   }, [flowers, query, hardiness]);
 
@@ -131,7 +130,7 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
                 onClick={() => changeHardiness("")}
                 className="rounded bg-primary px-2 py-1 text-xs font-medium text-on-primary hover:bg-primary-strong"
               >
-                Hardy to zone {hardiness} <span aria-hidden>×</span>
+                Zone {hardiness} <span aria-hidden>×</span>
               </button>
             )}
             {active.map(({ key, value }) => (

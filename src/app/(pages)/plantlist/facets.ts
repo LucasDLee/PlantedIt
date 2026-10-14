@@ -290,11 +290,17 @@ export function formatOption(key: FacetKey, value: string): string {
   return key === "flower_group" ? formatGroup(value) : value;
 }
 
-// "Zone 4a -34.4 °C ..." -> 4, "6b" -> 6.5; lower ranks are colder
-export function zoneRank(value: string): number | null {
+// "Zone 4a -34.4 °C ..." -> "4a", "Zone 3 -40 °C ..." -> "3"
+export function parseZone(value: string): string | null {
   const match = value.trim().match(/^(?:zone\s+)?(\d{1,2})([ab])?/i);
   if (!match) return null;
-  return Number(match[1]) + (match[2]?.toLowerCase() === "b" ? 0.5 : 0);
+  return match[1] + (match[2]?.toLowerCase() ?? "");
+}
+
+// Exact match; a zone without a/b ("3") matches both halves of that zone
+export function matchesZone(plantZone: string | null, selected: string): boolean {
+  if (!plantZone) return false;
+  return plantZone === selected || plantZone === selected.replace(/[ab]$/, "");
 }
 
 export const HARDINESS_ZONES = Array.from({ length: 13 }, (_, i) => [`${i + 1}a`, `${i + 1}b`]).flat();

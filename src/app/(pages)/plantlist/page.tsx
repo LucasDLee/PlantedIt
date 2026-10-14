@@ -1,4 +1,4 @@
-import { buildFacets, extractFacets, zoneRank } from "./facets";
+import { buildFacets, extractFacets, parseZone } from "./facets";
 import type { Flower } from "./components/plant-card";
 import PageHeading from "@/src/components/page-heading";
 import PlantListFilter from "./components/plant-list-filter";
@@ -13,7 +13,7 @@ export default async function PlantList() {
     flower_color: row.flower_color,
     flower_group: row.flower_group,
     flower_name: row.flower_name,
-    hardiness_rank: row.minimum_cold_hardiness ? zoneRank(row.minimum_cold_hardiness) : null,
+    hardiness_zone: row.minimum_cold_hardiness ? parseZone(row.minimum_cold_hardiness) : null,
     life_cycle: row.life_cycle,
     minimum_cold_hardiness: row.minimum_cold_hardiness,
     plant_height: row.plant_height,

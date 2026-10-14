@@ -98,7 +98,7 @@ export default function PlantFilterPanel({
     <div>
       <div className="border-b border-line pb-4">
         <label htmlFor="hardiness" className="text-sm font-semibold text-primary-strong">
-          Hardy to zone
+          Hardiness zone
         </label>
         <select
           id="hardiness"
