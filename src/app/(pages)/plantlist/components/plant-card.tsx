@@ -1,17 +1,17 @@
+import { type FlowerFacets, formatGroup } from "../facets";
+
 export interface Flower {
+  facets: FlowerFacets;
   flower_color: string | null;
   flower_group: string | null;
   flower_name: string;
+  hardiness_rank: number | null;
   life_cycle: string | null;
   minimum_cold_hardiness: string | null;
   plant_height: string | null;
   sun_requirements: string | null;
   url: string | null;
   uuid: string;
-}
-
-function formatGroup(group: string): string {
-  return group.charAt(0).toUpperCase() + group.slice(1);
 }
 
 // "Zone 4a -34.4 °C (-30 °F) to ..." -> "Zone 4a"
