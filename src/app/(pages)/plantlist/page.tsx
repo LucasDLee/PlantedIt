@@ -1,33 +1,29 @@
-import { buildFacets, extractFacets, parseZone } from "./facets";
-import type { Flower } from "./components/plant-card";
+import { type SearchParams, filterPlants, parseFilters } from "./filter-plants";
 import PageHeading from "@/src/components/page-heading";
 import PlantListFilter from "./components/plant-list-filter";
-import { getAllFlowers } from "@/src/services/flowers.service";
+import { buildFacets } from "./facets";
+import { getAllPlants } from "./plants";
 
-export default async function PlantList() {
-  const rows = await getAllFlowers();
-
-  // Only send the fields the cards and filters use to the client
-  const flowers: Flower[] = rows.map((row) => ({
-    facets: extractFacets(row),
-    flower_color: row.flower_color,
-    flower_group: row.flower_group,
-    flower_name: row.flower_name,
-    hardiness_zone: row.minimum_cold_hardiness ? parseZone(row.minimum_cold_hardiness) : null,
-    life_cycle: row.life_cycle,
-    minimum_cold_hardiness: row.minimum_cold_hardiness,
-    plant_height: row.plant_height,
-    sun_requirements: row.sun_requirements,
-    url: row.url,
-    uuid: row.uuid
-  }));
+export default async function PlantList({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const plants = await getAllPlants();
+  const facets = buildFacets(plants);
+  const { show, ...filters } = parseFilters(await searchParams, facets);
+  const { counts, results } = filterPlants(plants, filters, facets);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
       <PageHeading eyebrow="Catalogue" title="Plant list">
-        Browse flowers and ornamentals, with sun needs, life cycle and cold hardiness at a glance.
+        Browse flowers, vegetables, fruit and herbs, with sun needs, hardiness and growing details at a glance.
       </PageHeading>
-      <PlantListFilter facets={buildFacets(flowers)} flowers={flowers} />
+      {/* Only the visible page of results is sent to the client */}
+      <PlantListFilter
+        counts={counts}
+        facets={facets}
+        filters={filters}
+        plants={results.slice(0, show)}
+        show={show}
+        total={results.length}
+      />
     </div>
   );
 }

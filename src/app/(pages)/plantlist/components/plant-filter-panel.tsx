@@ -1,13 +1,12 @@
 'use client';
 
 import { type Facet, type FacetKey, HARDINESS_ZONES, formatOption } from "../facets";
+import { type FacetCounts, type Selection } from "../filter-plants";
 import { ZONE_EVENT, getZone } from "@/src/lib/storage/zone";
 import { useEffect, useState } from "react";
 
-export type Selection = Partial<Record<FacetKey, string[]>>;
-
 // Sections expanded on first render
-const OPEN_BY_DEFAULT: FacetKey[] = ["plant_habit", "sun_requirements", "life_cycle"];
+const OPEN_BY_DEFAULT: FacetKey[] = ["category", "plant_habit", "sun"];
 
 function useSavedZone(): string | null {
   const [zone, setZone] = useState<string | null>(null);
@@ -30,7 +29,7 @@ function FacetSection({
   onToggle,
   selected
 }: {
-  counts: Map<string, number>;
+  counts: Record<string, number>;
   facet: Facet;
   onToggle: (key: FacetKey, value: string) => void;
   selected: string[];
@@ -50,7 +49,7 @@ function FacetSection({
       <ul className={`mt-2 space-y-0.5 ${facet.options.length > 12 ? "max-h-60 overflow-y-auto pr-1" : ""}`}>
         {facet.options.map((option) => {
           const checked = selected.includes(option);
-          const count = counts.get(option) ?? 0;
+          const count = counts[option] ?? 0;
           const disabled = count === 0 && !checked;
           return (
             <li key={option}>
@@ -85,7 +84,7 @@ export default function PlantFilterPanel({
   onToggle,
   selected
 }: {
-  counts: Map<FacetKey, Map<string, number>>;
+  counts: FacetCounts;
   facets: Facet[];
   hardiness: string;
   onHardinessChange: (zone: string) => void;
@@ -125,7 +124,7 @@ export default function PlantFilterPanel({
       {facets.map((facet) => (
         <FacetSection
           key={facet.key}
-          counts={counts.get(facet.key) ?? new Map()}
+          counts={counts[facet.key] ?? {}}
           facet={facet}
           onToggle={onToggle}
           selected={selected[facet.key] ?? []}

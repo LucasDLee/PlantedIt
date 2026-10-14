@@ -1,27 +1,36 @@
-// Filterable categories of the flowers table. Most columns hold comma-joined
-// garden.org vocabulary mixed with free text ("Other: ..."), so each facet lists
-// its known values and anything outside that list is ignored.
+// Filterable categories across the flowers and farming tables. Flowers columns
+// hold comma-joined garden.org vocabulary mixed with free text ("Other: ..."),
+// so each facet lists its known values and anything outside that list is ignored.
+
+export type PlantSource = "farming" | "flowers";
+
+type Row = Record<string, unknown>;
 
 export type FacetKey =
   | "bloom_size"
+  | "category"
   | "containers"
   | "flower_color"
   | "flower_group"
   | "flower_time"
   | "flowers"
+  | "frost_tolerance"
   | "fruit"
   | "leaves"
   | "life_cycle"
   | "miscellaneous"
   | "plant_habit"
   | "resistances"
+  | "season"
   | "soil_pH_preferences"
+  | "sow_method"
   | "suitable_locations"
-  | "sun_requirements"
+  | "sun"
   | "uses"
+  | "water"
   | "wildlife_attractant";
 
-export type FlowerFacets = Partial<Record<FacetKey, string[]>>;
+export type PlantFacets = Partial<Record<FacetKey, string[]>>;
 
 export interface Facet {
   key: FacetKey;
@@ -29,27 +38,210 @@ export interface Facet {
   options: string[];
 }
 
+// Either column(s) whose values map through a lookup, or a function for
+// values that need more than a lookup
+type FacetSource =
+  | {
+    column: string | string[];
+    // Lowercased raw value -> option(s); defaults to the options themselves
+    values?: Record<string, string | string[]>;
+  }
+  | ((row: Row) => string[]);
+
+interface FacetDefinition extends Facet {
+  farming?: FacetSource;
+  flowers?: FacetSource;
+}
+
+// Flower groups that are crops; every other group counts as "Flower"
+const FLOWER_GROUP_CATEGORIES: Record<string, string> = {
+  apples: "Fruit",
+  apricots: "Fruit",
+  artichokes: "Vegetable",
+  asparagus: "Vegetable",
+  basil: "Herb",
+  beans: "Vegetable",
+  beets: "Vegetable",
+  brassicas: "Vegetable",
+  cantaloupes: "Vegetable",
+  carrots: "Vegetable",
+  celery: "Vegetable",
+  cherries: "Fruit",
+  chives: "Herb",
+  cilantro: "Herb",
+  citrus: "Fruit",
+  corn: "Vegetable",
+  cucumbers: "Vegetable",
+  cucurbits: "Vegetable",
+  dill: "Herb",
+  eggplants: "Vegetable",
+  figs: "Fruit",
+  garlic: "Vegetable",
+  jujubes: "Fruit",
+  leeks: "Vegetable",
+  lettuces: "Vegetable",
+  marjoram: "Herb",
+  mints: "Herb",
+  okra: "Vegetable",
+  onions: "Vegetable",
+  oregano: "Herb",
+  parsley: "Herb",
+  parsnips: "Vegetable",
+  peaches: "Fruit",
+  pears: "Fruit",
+  peas: "Vegetable",
+  peppers: "Vegetable",
+  plums: "Fruit",
+  potatoes: "Vegetable",
+  radishes: "Vegetable",
+  rhubarbs: "Vegetable",
+  ribes: "Berry",
+  rubus: "Berry",
+  sage: "Herb",
+  spinach: "Vegetable",
+  strawberries: "Berry",
+  sunroots: "Vegetable",
+  sweetpotatoes: "Vegetable",
+  swisschard: "Vegetable",
+  tarragon: "Herb",
+  thyme: "Herb",
+  tomatoes: "Vegetable",
+  turnips: "Vegetable",
+  vitis: "Fruit"
+};
+
+function flowerCategory(row: Row): string[] {
+  const group = String(row.flower_group ?? "").trim().toLowerCase();
+  return group ? [FLOWER_GROUP_CATEGORIES[group] ?? "Flower"] : [];
+}
+
+// Farming subcategories describe the habit in free text ("tree fruit", "evergreen shrub")
+const SUBCATEGORY_HABITS: [RegExp, string][] = [
+  [/\btrees?\b/, "Tree"],
+  [/\bshrubs?\b/, "Shrub"],
+  [/\bvines?\b/, "Vine"],
+  [/\b(grass|bamboo)/, "Grass/Grass-like"],
+  [/\b(succulent|cact)/, "Cactus/Succulent"]
+];
+
+function farmingHabit(row: Row): string[] {
+  const subcategory = String(row.subcategory ?? "").toLowerCase();
+  return SUBCATEGORY_HABITS.filter(([pattern]) => pattern.test(subcategory)).map(([, habit]) => habit);
+}
+
+// A life cycle named in the subcategory wins; otherwise warm- and cool-season
+// crops are grown as annuals
+function farmingLifeCycle(row: Row): string[] {
+  const subcategory = String(row.subcategory ?? "").toLowerCase();
+  const named = ["Annual", "Biennial", "Perennial"].find((cycle) => subcategory.includes(cycle.toLowerCase()));
+  if (named) return [named];
+  if (row.season === "perennial") return ["Perennial"];
+  return row.season === "warm" || row.season === "cool" ? ["Annual"] : [];
+}
+
 // Display order of the filter panel; flower_group options come from the data
-const FACET_VOCABULARY: Facet[] = [
+const FACET_DEFINITIONS: FacetDefinition[] = [
   {
+    farming: {
+      column: "category",
+      values: {
+        "berry": "Berry",
+        "cover-crop": "Cover crop",
+        "flower": "Flower",
+        "fruit": "Fruit",
+        "herb": "Herb",
+        "vegetable": "Vegetable"
+      }
+    },
+    flowers: flowerCategory,
+    key: "category",
+    label: "Category",
+    options: ["Vegetable", "Fruit", "Berry", "Herb", "Flower", "Cover crop"]
+  },
+  {
+    farming: farmingHabit,
+    flowers: { column: "plant_habit" },
     key: "plant_habit",
     label: "Plant type",
     options: ["Herb/Forb", "Shrub", "Tree", "Vine", "Cactus/Succulent", "Grass/Grass-like"]
   },
-  { key: "flower_group", label: "Group", options: [] },
-  { key: "life_cycle", label: "Life cycle", options: ["Annual", "Biennial", "Perennial"] },
+  { flowers: { column: "flower_group" }, key: "flower_group", label: "Group", options: [] },
   {
-    key: "sun_requirements",
-    label: "Sun",
-    options: [
-      "Full Sun",
-      "Full Sun to Partial Shade",
-      "Partial or Dappled Shade",
-      "Partial Shade to Full Shade",
-      "Full Shade"
-    ]
+    farming: farmingLifeCycle,
+    flowers: { column: "life_cycle" },
+    key: "life_cycle",
+    label: "Life cycle",
+    options: ["Annual", "Biennial", "Perennial"]
   },
   {
+    farming: { column: "season", values: { cool: "Cool season", warm: "Warm season" } },
+    key: "season",
+    label: "Growing season",
+    options: ["Cool season", "Warm season"]
+  },
+  {
+    farming: {
+      column: "sun",
+      values: { full: "Full sun", partial: "Part shade", shade: "Full shade" }
+    },
+    flowers: {
+      column: "sun_requirements",
+      values: {
+        "full shade": "Full shade",
+        "full sun": "Full sun",
+        "full sun to partial shade": ["Full sun", "Part shade"],
+        "partial or dappled shade": "Part shade",
+        "partial shade to full shade": ["Part shade", "Full shade"]
+      }
+    },
+    key: "sun",
+    label: "Sun",
+    options: ["Full sun", "Part shade", "Full shade"]
+  },
+  {
+    farming: { column: "water", values: { high: "High", low: "Low", moderate: "Moderate" } },
+    key: "water",
+    label: "Water",
+    options: ["Low", "Moderate", "High"]
+  },
+  {
+    farming: {
+      column: "frost_tolerance",
+      values: { "half-hardy": "Half-hardy", "hardy": "Hardy", "tender": "Tender" }
+    },
+    key: "frost_tolerance",
+    label: "Frost tolerance",
+    options: ["Hardy", "Half-hardy", "Tender"]
+  },
+  {
+    farming: {
+      column: "sow_method",
+      values: {
+        "bulb": "Bulb",
+        "cutting": "Cutting",
+        "direct": "Direct sow",
+        "division": "Division",
+        "indoor-start": "Start indoors",
+        "transplant": "Transplant",
+        "tuber": "Tuber"
+      }
+    },
+    flowers: {
+      column: ["propagation_seeds", "propagation_other_methods"],
+      values: {
+        "bulbs": "Bulb",
+        "cuttings": "Cutting",
+        "division": "Division",
+        "sow in situ": "Direct sow",
+        "start indoors": "Start indoors"
+      }
+    },
+    key: "sow_method",
+    label: "Planting method",
+    options: ["Direct sow", "Start indoors", "Transplant", "Division", "Cutting", "Bulb", "Tuber"]
+  },
+  {
+    flowers: { column: "flower_time" },
     key: "flower_time",
     label: "Bloom time",
     options: [
@@ -65,6 +257,7 @@ const FACET_VOCABULARY: Facet[] = [
     ]
   },
   {
+    flowers: { column: "flower_color" },
     key: "flower_color",
     label: "Flower color",
     options: [
@@ -84,16 +277,19 @@ const FACET_VOCABULARY: Facet[] = [
     ]
   },
   {
+    flowers: { column: "bloom_size" },
     key: "bloom_size",
     label: "Bloom size",
     options: ["Under 1\"", "1\"-2\"", "2\"-3\"", "3\"-4\"", "4\"-5\"", "5\"-6\"", "6\"-12\"", "Over 12\""]
   },
   {
+    flowers: { column: "flowers" },
     key: "flowers",
     label: "Flowers",
     options: ["Showy", "Fragrant", "Inconspicuous", "Malodorous", "Blooms on old wood", "Blooms on new wood"]
   },
   {
+    flowers: { column: "leaves" },
     key: "leaves",
     label: "Foliage",
     options: [
@@ -110,14 +306,19 @@ const FACET_VOCABULARY: Facet[] = [
       "Spring ephemeral"
     ]
   },
-  { key: "fruit", label: "Fruit", options: ["Showy", "Edible to birds", "Dehiscent"] },
   {
+    flowers: { column: "fruit" },
+    key: "fruit",
+    label: "Fruit",
+    options: ["Showy", "Edible to birds", "Dehiscent"]
+  },
+  {
+    flowers: { column: "uses" },
     key: "uses",
     label: "Uses",
     options: [
       "Cut Flower",
       "Dried Flower",
-      "Vegetable",
       "Culinary Herb",
       "Medicinal Herb",
       "Salad greens",
@@ -133,18 +334,19 @@ const FACET_VOCABULARY: Facet[] = [
       "Suitable for miniature gardens",
       "Water gardens",
       "Guardian plant",
-      "Good as a cover crop",
       "Suitable for forage",
       "Useful for timber production",
       "Dye production"
     ]
   },
   {
+    flowers: { column: "wildlife_attractant" },
     key: "wildlife_attractant",
     label: "Attracts",
     options: ["Bees", "Butterflies", "Hummingbirds", "Birds", "Other Beneficial Insects"]
   },
   {
+    flowers: { column: "resistances" },
     key: "resistances",
     label: "Resistances",
     options: [
@@ -165,6 +367,7 @@ const FACET_VOCABULARY: Facet[] = [
     ]
   },
   {
+    flowers: { column: "suitable_locations" },
     key: "suitable_locations",
     label: "Suitable for",
     options: [
@@ -181,6 +384,7 @@ const FACET_VOCABULARY: Facet[] = [
     ]
   },
   {
+    flowers: { column: "containers" },
     key: "containers",
     label: "Containers",
     options: [
@@ -194,6 +398,7 @@ const FACET_VOCABULARY: Facet[] = [
     ]
   },
   {
+    flowers: { column: "soil_pH_preferences" },
     key: "soil_pH_preferences",
     label: "Soil pH",
     options: [
@@ -207,6 +412,7 @@ const FACET_VOCABULARY: Facet[] = [
     ]
   },
   {
+    flowers: { column: "miscellaneous" },
     key: "miscellaneous",
     label: "Traits",
     options: [
@@ -221,13 +427,17 @@ const FACET_VOCABULARY: Facet[] = [
   }
 ];
 
-// Lowercased value -> canonical option, per facet
-const LOOKUP = new Map(
-  FACET_VOCABULARY.map(({ key, options }) => [
-    key,
-    new Map(options.map((option) => [option.toLowerCase(), option]))
-  ])
-);
+// Lowercased raw value -> options, per facet source
+const LOOKUPS = new Map<FacetSource, Map<string, string[]>>();
+for (const definition of FACET_DEFINITIONS) {
+  for (const from of [definition.farming, definition.flowers]) {
+    if (!from || typeof from === "function") continue;
+    const entries: [string, string | string[]][] = from.values
+      ? Object.entries(from.values)
+      : definition.options.map((option) => [option.toLowerCase(), option]);
+    LOOKUPS.set(from, new Map(entries.map(([raw, options]) => [raw, [options].flat()])));
+  }
+}
 
 // "Neutral (6.6 – 7.3), Bi-Color: pink/white" -> ["neutral", "bi-color"]
 function splitValues(raw: string): string[] {
@@ -237,33 +447,43 @@ function splitValues(raw: string): string[] {
     .filter(Boolean);
 }
 
-export function extractFacets(row: Record<string, unknown>): FlowerFacets {
-  const facets: FlowerFacets = {};
+function sourceValues(from: FacetSource, key: FacetKey, row: Row): string[] {
+  if (typeof from === "function") return from(row);
 
-  for (const [key, lookup] of LOOKUP) {
-    const raw = row[key];
+  const lookup = LOOKUPS.get(from)!;
+  const values = new Set<string>();
+  for (const column of [from.column].flat()) {
+    const raw = row[column];
     if (typeof raw !== "string" || !raw.trim()) continue;
 
     if (key === "flower_group") {
-      facets[key] = [raw.trim().toLowerCase()];
+      values.add(raw.trim().toLowerCase());
       continue;
     }
-
-    const values = new Set<string>();
     for (const token of splitValues(raw)) {
-      const option = lookup.get(token);
-      if (option) values.add(option);
+      lookup.get(token)?.forEach((option) => values.add(option));
     }
-    if (values.size) facets[key] = [...values];
+  }
+  return [...values];
+}
+
+export function extractFacets(source: PlantSource, row: Row): PlantFacets {
+  const facets: PlantFacets = {};
+
+  for (const definition of FACET_DEFINITIONS) {
+    const from = definition[source];
+    if (!from) continue;
+    const values = sourceValues(from, definition.key, row);
+    if (values.length) facets[definition.key] = values;
   }
 
   return facets;
 }
 
 // Facets with only the options that occur in the data
-export function buildFacets(flowers: { facets: FlowerFacets }[]): Facet[] {
+export function buildFacets(plants: { facets: PlantFacets }[]): Facet[] {
   const present = new Map<FacetKey, Set<string>>();
-  for (const { facets } of flowers) {
+  for (const { facets } of plants) {
     for (const [key, values] of Object.entries(facets) as [FacetKey, string[]][]) {
       const set = present.get(key) ?? new Set<string>();
       values.forEach((value) => set.add(value));
@@ -271,12 +491,13 @@ export function buildFacets(flowers: { facets: FlowerFacets }[]): Facet[] {
     }
   }
 
-  return FACET_VOCABULARY.map((facet) => {
-    const found = present.get(facet.key) ?? new Set<string>();
-    const options = facet.key === "flower_group"
-      ? [...found].sort()
-      : facet.options.filter((option) => found.has(option));
-    return { ...facet, options };
+  return FACET_DEFINITIONS.map(({ key, label, options }) => {
+    const found = present.get(key) ?? new Set<string>();
+    return {
+      key,
+      label,
+      options: key === "flower_group" ? [...found].sort() : options.filter((option) => found.has(option))
+    };
   }).filter((facet) => facet.options.length > 0);
 }
 
@@ -297,10 +518,22 @@ export function parseZone(value: string): string | null {
   return match[1] + (match[2]?.toLowerCase() ?? "");
 }
 
-// Exact match; a zone without a/b ("3") matches both halves of that zone
-export function matchesZone(plantZone: string | null, selected: string): boolean {
-  if (!plantZone) return false;
-  return plantZone === selected || plantZone === selected.replace(/[ab]$/, "");
+export interface PlantZone {
+  // Flowers: minimum cold hardiness, e.g. "4a"
+  hardiness_zone: string | null;
+  // Farming: whole-number USDA range the plant grows in
+  zone_range: [number, number] | null;
+}
+
+// Flowers match their zone exactly, and a zone without a/b ("3") matches both
+// halves. Farming plants match any zone inside their range.
+export function matchesZone(plant: PlantZone, selected: string): boolean {
+  if (plant.zone_range) {
+    const zone = parseInt(selected, 10);
+    return zone >= plant.zone_range[0] && zone <= plant.zone_range[1];
+  }
+  if (!plant.hardiness_zone) return false;
+  return plant.hardiness_zone === selected || plant.hardiness_zone === selected.replace(/[ab]$/, "");
 }
 
 export const HARDINESS_ZONES = Array.from({ length: 13 }, (_, i) => [`${i + 1}a`, `${i + 1}b`]).flat();

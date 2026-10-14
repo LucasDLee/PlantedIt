@@ -1,85 +1,63 @@
 'use client';
 
-import { type Facet, type FacetKey, formatOption, matchesZone } from "../facets";
-import PlantCard, { type Flower } from "./plant-card";
-import PlantFilterPanel, { type Selection } from "./plant-filter-panel";
-import { useMemo, useState } from "react";
+import { type Facet, type FacetKey, formatOption } from "../facets";
+import { type FacetCounts, PAGE_SIZE, type PlantFilters, toSearch } from "../filter-plants";
+import PlantCard, { type Plant } from "./plant-card";
+import { useCallback, useEffect, useOptimistic, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import PlantFilterPanel from "./plant-filter-panel";
 
-const PAGE_SIZE = 48;
-
-// Values within a facet are OR'd, facets are AND'd. `skip` ignores one facet,
-// which gives each facet's option counts as if that facet were unfiltered.
-function matchesSelection(flower: Flower, selected: Selection, skip?: FacetKey): boolean {
-  return (Object.entries(selected) as [FacetKey, string[]][]).every(([key, values]) =>
-    key === skip ||
-    values.length === 0 ||
-    values.some((value) => flower.facets[key]?.includes(value))
-  );
-}
-
-export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; flowers: Flower[] }) {
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Selection>({});
-  const [hardiness, setHardiness] = useState("");
+export default function PlantListFilter({
+  counts,
+  facets,
+  filters,
+  plants,
+  show,
+  total
+}: {
+  counts: FacetCounts;
+  facets: Facet[];
+  filters: PlantFilters;
+  plants: Plant[];
+  show: number;
+  total: number;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+  // Reflects clicks immediately while the server renders the new results
+  const [current, setCurrent] = useOptimistic(filters);
+  const [query, setQuery] = useState(filters.query);
   const [showFilters, setShowFilters] = useState(false);
-  const [visible, setVisible] = useState(PAGE_SIZE);
 
-  // Search and hardiness narrow the pool every facet counts from
-  const base = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return flowers.filter((flower) =>
-      (!q ||
-        flower.flower_name.toLowerCase().includes(q) ||
-        (flower.flower_group ?? "").toLowerCase().includes(q)) &&
-      (!hardiness || matchesZone(flower.hardiness_zone, hardiness))
-    );
-  }, [flowers, query, hardiness]);
+  const apply = useCallback((next: PlantFilters, nextShow?: number) => {
+    startTransition(() => {
+      setCurrent(next);
+      const search = toSearch(next, nextShow);
+      router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
+    });
+  }, [pathname, router, setCurrent]);
 
-  const filtered = useMemo(
-    () => base.filter((flower) => matchesSelection(flower, selected)),
-    [base, selected]
-  );
-
-  const counts = useMemo(() => {
-    const result = new Map<FacetKey, Map<string, number>>();
-    for (const facet of facets) {
-      const tally = new Map<string, number>();
-      for (const flower of base) {
-        if (!matchesSelection(flower, selected, facet.key)) continue;
-        for (const value of flower.facets[facet.key] ?? []) {
-          tally.set(value, (tally.get(value) ?? 0) + 1);
-        }
-      }
-      result.set(facet.key, tally);
-    }
-    return result;
-  }, [base, facets, selected]);
-
-  const active = (Object.entries(selected) as [FacetKey, string[]][])
-    .flatMap(([key, values]) => values.map((value) => ({ key, value })));
-  const activeCount = active.length + (hardiness ? 1 : 0);
+  // Search after typing pauses
+  useEffect(() => {
+    if (query.trim() === current.query) return;
+    const timer = setTimeout(() => apply({ ...current, query: query.trim() }), 300);
+    return () => clearTimeout(timer);
+  }, [apply, current, query]);
 
   const toggle = (key: FacetKey, value: string) => {
-    setSelected((prev) => {
-      const current = prev[key] ?? [];
-      const next = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-      return { ...prev, [key]: next };
-    });
-    setVisible(PAGE_SIZE);
+    const values = current.selected[key] ?? [];
+    const next = values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
+    const selected = { ...current.selected, [key]: next };
+    if (!next.length) delete selected[key];
+    apply({ ...current, selected });
   };
 
-  const changeHardiness = (zone: string) => {
-    setHardiness(zone);
-    setVisible(PAGE_SIZE);
-  };
+  const changeZone = (zone: string) => apply({ ...current, zone });
 
-  const clearAll = () => {
-    setSelected({});
-    setHardiness("");
-    setVisible(PAGE_SIZE);
-  };
+  const active = (Object.entries(current.selected) as [FacetKey, string[]][])
+    .flatMap(([key, values]) => values.map((value) => ({ key, value })));
+  const activeCount = active.length + (current.zone ? 1 : 0);
 
   return (
     <div className="mt-8 lg:grid lg:grid-cols-[15rem_1fr] lg:gap-8">
@@ -87,10 +65,10 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
         <PlantFilterPanel
           counts={counts}
           facets={facets}
-          hardiness={hardiness}
-          onHardinessChange={changeHardiness}
+          hardiness={current.zone}
+          onHardinessChange={changeZone}
           onToggle={toggle}
-          selected={selected}
+          selected={current.selected}
         />
       </aside>
 
@@ -100,10 +78,7 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
             <input
               type="search"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setVisible(PAGE_SIZE);
-              }}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or group…"
               aria-label="Search plants"
               className="w-full rounded-md border-2 border-transparent bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-primary"
@@ -117,20 +92,20 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
               Filters{activeCount > 0 && ` (${activeCount})`}
             </button>
           </div>
-          <p className="text-sm text-muted">
-            {filtered.length.toLocaleString()} {filtered.length === 1 ? "plant" : "plants"}
+          <p className="text-sm text-muted" aria-live="polite">
+            {isPending ? "Updating…" : `${total.toLocaleString()} ${total === 1 ? "plant" : "plants"}`}
           </p>
         </div>
 
         {activeCount > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {hardiness && (
+            {current.zone && (
               <button
                 type="button"
-                onClick={() => changeHardiness("")}
+                onClick={() => changeZone("")}
                 className="rounded bg-primary px-2 py-1 text-xs font-medium text-on-primary hover:bg-primary-strong"
               >
-                Zone {hardiness} <span aria-hidden>×</span>
+                Zone {current.zone} <span aria-hidden>×</span>
               </button>
             )}
             {active.map(({ key, value }) => (
@@ -146,7 +121,7 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
             ))}
             <button
               type="button"
-              onClick={clearAll}
+              onClick={() => apply({ ...current, selected: {}, zone: "" })}
               className="px-1 text-xs font-semibold text-primary hover:text-primary-strong"
             >
               Clear all
@@ -154,27 +129,30 @@ export default function PlantListFilter({ facets, flowers }: { facets: Facet[]; 
           </div>
         )}
 
-        {filtered.length === 0 ? (
-          <p className="mt-12 text-muted">No plants match your search and filters.</p>
-        ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.slice(0, visible).map((flower) => (
-              <PlantCard key={flower.uuid} flower={flower} />
-            ))}
-          </div>
-        )}
+        <div className={`transition-opacity ${isPending ? "opacity-60" : ""}`}>
+          {total === 0 ? (
+            <p className="mt-12 text-muted">No plants match your search and filters.</p>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {plants.map((plant) => (
+                <PlantCard key={plant.uuid} plant={plant} />
+              ))}
+            </div>
+          )}
 
-        {visible < filtered.length && (
-          <div className="mt-8 flex">
-            <button
-              type="button"
-              onClick={() => setVisible((v) => v + PAGE_SIZE)}
-              className="rounded-md bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong"
-            >
-              Show more
-            </button>
-          </div>
-        )}
+          {show < total && (
+            <div className="mt-8 flex">
+              <button
+                type="button"
+                onClick={() => apply(current, show + PAGE_SIZE)}
+                disabled={isPending}
+                className="rounded-md bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong disabled:opacity-60"
+              >
+                Show more
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
