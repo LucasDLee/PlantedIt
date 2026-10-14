@@ -15,6 +15,54 @@ const getAllFood = unstable_cache(
   { revalidate: revalidationTime, tags: [databaseName] }
 );
 
+// Columns the plant list needs; the full rows are too large to cache in bulk
+const LIST_COLUMNS = [
+  "uuid",
+  "common_name",
+  "scientific_name",
+  "category",
+  "subcategory",
+  "sow_method",
+  "season",
+  "frost_tolerance",
+  "usda_zone_min",
+  "usda_zone_max",
+  "height_in_min",
+  "height_in_max",
+  "sun",
+  "water",
+  "maturity_days_min",
+  "maturity_days_max"
+].join(", ");
+
+// Supabase returns at most 1000 rows per select by default
+const LIST_PAGE_SIZE = 1000;
+
+// Cached per page so each cache entry stays under Next's 2MB limit
+const getFoodListPage = unstable_cache(
+  async (page: number) => {
+    const supabase = createServerClient();
+    const { data, error } = await supabase
+      .from(databaseName)
+      .select(LIST_COLUMNS)
+      .order("uuid")
+      .range(page * LIST_PAGE_SIZE, (page + 1) * LIST_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    return data as unknown as Record<string, unknown>[];
+  },
+  ["farming-list-page"],
+  { revalidate: revalidationTime, tags: [databaseName] }
+);
+
+async function getFoodList() {
+  const rows: Record<string, unknown>[] = [];
+  for (let page = 0; ; page++) {
+    const batch = await getFoodListPage(page);
+    rows.push(...batch);
+    if (batch.length < LIST_PAGE_SIZE) return rows;
+  }
+}
+
 const selectFood = unstable_cache(
   async (id: string) => {
     const supabase = createServerClient();
@@ -59,4 +107,4 @@ const selectFarmingRange = unstable_cache(
   { revalidate: revalidationTime, tags: [databaseName] }
 );
 
-export { getAllFood, selectFarmingGroup, selectFood, selectFarmingRange };
+export { getAllFood, getFoodList, selectFarmingGroup, selectFood, selectFarmingRange };
