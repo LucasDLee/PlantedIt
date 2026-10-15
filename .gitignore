@@ -144,3 +144,5 @@ vite.config.ts.timestamp-*
 .vite/
 
 csv/
+scripts/
+public/tiles

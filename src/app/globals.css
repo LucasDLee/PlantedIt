@@ -57,6 +57,13 @@ body {
   background: var(--tint);
 }
 
+.leaflet-control-layers,
+.leaflet-touch .leaflet-control-layers {
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   box-shadow: none;

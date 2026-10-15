@@ -1,7 +1,8 @@
 'use client';
 
+import { HARDINESS_TILE_MAX_ZOOM, HARDINESS_TILE_URL, HARDINESS_ZONE_COLORS } from '@/src/constants/hardiness';
 import L, { type LatLngExpression } from 'leaflet';
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
+import { LayersControl, MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
 import { type SavedLocation, getLocation, saveLocation } from '@/src/lib/storage/locations';
 import { DUMMY_LOCATION } from '@/src/constants/geocoding';
 import { getZone } from '@/src/app/api/coords-zone';
@@ -69,7 +70,43 @@ function LocationMarker({
   );
 }
 
+const HARDINESS_LAYER_NAME = 'Hardiness zones';
+
+// Reports when the hardiness overlay is toggled in the layers control
+function OverlayWatcher({ onToggle }: { onToggle: (visible: boolean) => void }) {
+  useMapEvents({
+    overlayadd(e) {
+      if (e.name === HARDINESS_LAYER_NAME) onToggle(true);
+    },
+    overlayremove(e) {
+      if (e.name === HARDINESS_LAYER_NAME) onToggle(false);
+    }
+  });
+
+  return null;
+}
+
+function HardinessLegend() {
+  return (
+    <div className="absolute bottom-6 left-4 z-[1000] rounded-md border border-line bg-background px-3 py-2">
+      <p className="mb-1 text-xs font-medium text-muted">Hardiness zone</p>
+      <div className="flex">
+        {Array.from({ length: HARDINESS_ZONE_COLORS.length / 2 }, (_, i) => (
+          <div key={i} className="flex w-6 flex-col items-center">
+            <div className="flex h-3 w-full">
+              <span className="flex-1" style={{ background: HARDINESS_ZONE_COLORS[i * 2] }} />
+              <span className="flex-1" style={{ background: HARDINESS_ZONE_COLORS[i * 2 + 1] }} />
+            </div>
+            <span className="mt-0.5 text-[10px] text-muted">{i + 1}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Map() {
+  const [showHardiness, setShowHardiness] = useState(false);
   const [position, setPosition] = useState<[number, number] | null>(() => {
     const saved = getLocation();
     return saved === DUMMY_LOCATION ? null : [saved.lat, saved.lng];
@@ -90,8 +127,20 @@ export default function Map() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap contributors'
         />
+        <LayersControl position="topleft">
+          <LayersControl.Overlay name={HARDINESS_LAYER_NAME}>
+            <TileLayer
+              url={HARDINESS_TILE_URL}
+              maxNativeZoom={HARDINESS_TILE_MAX_ZOOM}
+              opacity={0.55}
+              attribution="Zones derived from NOAA CPC and WorldClim"
+            />
+          </LayersControl.Overlay>
+        </LayersControl>
+        <OverlayWatcher onToggle={setShowHardiness} />
         <LocationMarker position={position} setPosition={setPosition} />
       </MapContainer>
+      {showHardiness && <HardinessLegend />}
 
       {/* {address && (
         <div style={{ marginTop: '1rem' }}>
