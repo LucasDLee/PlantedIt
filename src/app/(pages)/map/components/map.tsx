@@ -106,7 +106,7 @@ function HardinessLegend() {
 }
 
 export default function Map() {
-  const [showHardiness, setShowHardiness] = useState(false);
+  const [showHardiness, setShowHardiness] = useState(true);
   const [position, setPosition] = useState<[number, number] | null>(() => {
     const saved = getLocation();
     return saved === DUMMY_LOCATION ? null : [saved.lat, saved.lng];
@@ -128,7 +128,7 @@ export default function Map() {
           attribution='&copy; OpenStreetMap contributors'
         />
         <LayersControl position="topleft">
-          <LayersControl.Overlay name={HARDINESS_LAYER_NAME}>
+          <LayersControl.Overlay checked={showHardiness} name={HARDINESS_LAYER_NAME}>
             <TileLayer
               url={HARDINESS_TILE_URL}
               maxNativeZoom={HARDINESS_TILE_MAX_ZOOM}
