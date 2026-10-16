@@ -51,7 +51,7 @@ export default function PlantCard({ plant }: { plant: Plant }) {
           rel="noopener noreferrer"
           className="mt-auto pt-4 text-sm font-semibold text-primary hover:text-primary-strong"
         >
-          View details →
+          Read on Wikipedia →
         </a>
       )}
     </article>

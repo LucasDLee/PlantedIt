@@ -1,12 +1,12 @@
 'use client';
 
-import { type Facet, type FacetKey, HARDINESS_ZONES, formatOption } from "../facets";
+import { type Facet, type FacetKey, HARDINESS_ZONES } from "../facets";
 import { type FacetCounts, type Selection } from "../filter-plants";
 import { ZONE_EVENT, getZone } from "@/src/lib/storage/zone";
 import { useEffect, useState } from "react";
 
 // Sections expanded on first render
-const OPEN_BY_DEFAULT: FacetKey[] = ["category", "plant_habit", "sun"];
+const OPEN_BY_DEFAULT: FacetKey[] = ["category", "habit", "sun"];
 
 function useSavedZone(): string | null {
   const [zone, setZone] = useState<string | null>(null);
@@ -65,7 +65,7 @@ function FacetSection({
                   onChange={() => onToggle(facet.key, option)}
                   className="accent-primary"
                 />
-                <span className="flex-1">{formatOption(facet.key, option)}</span>
+                <span className="flex-1">{option}</span>
                 <span className="text-xs tabular-nums text-muted">{count}</span>
               </label>
             </li>

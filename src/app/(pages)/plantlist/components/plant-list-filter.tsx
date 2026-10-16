@@ -1,6 +1,6 @@
 'use client';
 
-import { type Facet, type FacetKey, formatOption } from "../facets";
+import { type Facet, type FacetKey } from "../facets";
 import { type FacetCounts, PAGE_SIZE, type PlantFilters, toSearch } from "../filter-plants";
 import PlantCard, { type Plant } from "./plant-card";
 import { useCallback, useEffect, useOptimistic, useState, useTransition } from "react";
@@ -113,10 +113,10 @@ export default function PlantListFilter({
                 key={`${key}:${value}`}
                 type="button"
                 onClick={() => toggle(key, value)}
-                aria-label={`Remove filter ${formatOption(key, value)}`}
+                aria-label={`Remove filter ${value}`}
                 className="rounded bg-tint px-2 py-1 text-xs font-medium text-primary-strong hover:bg-line"
               >
-                {formatOption(key, value)} <span aria-hidden>×</span>
+                {value} <span aria-hidden>×</span>
               </button>
             ))}
             <button

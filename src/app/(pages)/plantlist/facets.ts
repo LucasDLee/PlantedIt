@@ -1,34 +1,28 @@
-// Filterable categories across the flowers and farming tables. Flowers columns
-// hold comma-joined garden.org vocabulary mixed with free text ("Other: ..."),
-// so each facet lists its known values and anything outside that list is ignored.
-
-export type PlantSource = "farming" | "flowers";
+// Filterable categories for the plants table. Its columns use a fixed vocabulary
+// (see pipeline/attributes.py), so each facet lists its raw values in display
+// order, with labels where capitalizing the raw value isn't enough.
 
 type Row = Record<string, unknown>;
 
 export type FacetKey =
-  | "bloom_size"
+  | "bloom_seasons"
   | "category"
-  | "containers"
-  | "flower_color"
-  | "flower_group"
-  | "flower_time"
-  | "flowers"
+  | "edible_parts"
+  | "features"
+  | "flower_colors"
+  | "foliage"
   | "frost_tolerance"
-  | "fruit"
-  | "leaves"
+  | "habit"
   | "life_cycle"
-  | "miscellaneous"
-  | "plant_habit"
   | "resistances"
   | "season"
-  | "soil_pH_preferences"
-  | "sow_method"
-  | "suitable_locations"
+  | "soil_types"
+  | "sow_methods"
+  | "suitable_for"
   | "sun"
   | "uses"
   | "water"
-  | "wildlife_attractant";
+  | "wildlife";
 
 export type PlantFacets = Partial<Record<FacetKey, string[]>>;
 
@@ -38,445 +32,210 @@ export interface Facet {
   options: string[];
 }
 
-// Either column(s) whose values map through a lookup, or a function for
-// values that need more than a lookup
-type FacetSource =
-  | {
-    column: string | string[];
-    // Lowercased raw value -> option(s); defaults to the options themselves
-    values?: Record<string, string | string[]>;
-  }
-  | ((row: Row) => string[]);
-
-interface FacetDefinition extends Facet {
-  farming?: FacetSource;
-  flowers?: FacetSource;
+interface FacetDefinition {
+  // Column holding a single value or an array of values, or a function for derived facets
+  from: string | ((row: Row) => string[]);
+  key: FacetKey;
+  label: string;
+  labels?: Record<string, string>;
+  // Raw values in display order
+  values: string[];
 }
 
-// Flower groups that are crops; every other group counts as "Flower"
-const FLOWER_GROUP_CATEGORIES: Record<string, string> = {
-  apples: "Fruit",
-  apricots: "Fruit",
-  artichokes: "Vegetable",
-  asparagus: "Vegetable",
-  basil: "Herb",
-  beans: "Vegetable",
-  beets: "Vegetable",
-  brassicas: "Vegetable",
-  cantaloupes: "Vegetable",
-  carrots: "Vegetable",
-  celery: "Vegetable",
-  cherries: "Fruit",
-  chives: "Herb",
-  cilantro: "Herb",
-  citrus: "Fruit",
-  corn: "Vegetable",
-  cucumbers: "Vegetable",
-  cucurbits: "Vegetable",
-  dill: "Herb",
-  eggplants: "Vegetable",
-  figs: "Fruit",
-  garlic: "Vegetable",
-  jujubes: "Fruit",
-  leeks: "Vegetable",
-  lettuces: "Vegetable",
-  marjoram: "Herb",
-  mints: "Herb",
-  okra: "Vegetable",
-  onions: "Vegetable",
-  oregano: "Herb",
-  parsley: "Herb",
-  parsnips: "Vegetable",
-  peaches: "Fruit",
-  pears: "Fruit",
-  peas: "Vegetable",
-  peppers: "Vegetable",
-  plums: "Fruit",
-  potatoes: "Vegetable",
-  radishes: "Vegetable",
-  rhubarbs: "Vegetable",
-  ribes: "Berry",
-  rubus: "Berry",
-  sage: "Herb",
-  spinach: "Vegetable",
-  strawberries: "Berry",
-  sunroots: "Vegetable",
-  sweetpotatoes: "Vegetable",
-  swisschard: "Vegetable",
-  tarragon: "Herb",
-  thyme: "Herb",
-  tomatoes: "Vegetable",
-  turnips: "Vegetable",
-  vitis: "Fruit"
+// The source data files every ornamental under "flower", trees and shrubs included,
+// so for those the plant type (or a telling subcategory) decides the category
+const HABIT_CATEGORIES: Record<string, string> = {
+  "aquatic": "aquatic",
+  "cactus/succulent": "succulent",
+  "fern": "fern",
+  "grass": "grass",
+  "shrub": "shrub",
+  "tree": "tree",
+  "vine": "vine"
 };
-
-function flowerCategory(row: Row): string[] {
-  const group = String(row.flower_group ?? "").trim().toLowerCase();
-  return group ? [FLOWER_GROUP_CATEGORIES[group] ?? "Flower"] : [];
-}
-
-// Farming subcategories describe the habit in free text ("tree fruit", "evergreen shrub")
-const SUBCATEGORY_HABITS: [RegExp, string][] = [
-  [/\btrees?\b/, "Tree"],
-  [/\bshrubs?\b/, "Shrub"],
-  [/\bvines?\b/, "Vine"],
-  [/\b(grass|bamboo)/, "Grass/Grass-like"],
-  [/\b(succulent|cact)/, "Cactus/Succulent"]
+const SUBCATEGORY_CATEGORIES: [RegExp, string][] = [
+  [/\bconifer/, "tree"],
+  [/\b(sedge|rush)/, "grass"],
+  [/\bground ?cover/, "groundcover"]
 ];
 
-function farmingHabit(row: Row): string[] {
+function category(row: Row): string[] {
+  const value = typeof row.category === "string" ? row.category : null;
+  if (value !== "flower") return value ? [value] : [];
+  const habit = typeof row.habit === "string" ? HABIT_CATEGORIES[row.habit] : undefined;
   const subcategory = String(row.subcategory ?? "").toLowerCase();
-  return SUBCATEGORY_HABITS.filter(([pattern]) => pattern.test(subcategory)).map(([, habit]) => habit);
+  const named = SUBCATEGORY_CATEGORIES.find(([pattern]) => pattern.test(subcategory))?.[1];
+  return [habit ?? named ?? "flower"];
 }
 
-// A life cycle named in the subcategory wins; otherwise warm- and cool-season
-// crops are grown as annuals
-function farmingLifeCycle(row: Row): string[] {
-  const subcategory = String(row.subcategory ?? "").toLowerCase();
-  const named = ["Annual", "Biennial", "Perennial"].find((cycle) => subcategory.includes(cycle.toLowerCase()));
-  if (named) return [named];
-  if (row.season === "perennial") return ["Perennial"];
-  return row.season === "warm" || row.season === "cool" ? ["Annual"] : [];
-}
-
-// Display order of the filter panel; flower_group options come from the data
+// Display order of the filter panel
 const FACET_DEFINITIONS: FacetDefinition[] = [
   {
-    farming: {
-      column: "category",
-      values: {
-        "berry": "Berry",
-        "cover-crop": "Cover crop",
-        "flower": "Flower",
-        "fruit": "Fruit",
-        "herb": "Herb",
-        "vegetable": "Vegetable"
-      }
-    },
-    flowers: flowerCategory,
+    from: category,
     key: "category",
     label: "Category",
-    options: ["Vegetable", "Fruit", "Berry", "Herb", "Flower", "Cover crop"]
+    labels: { "cover-crop": "Cover crop" },
+    values: ["vegetable", "fruit", "berry", "herb", "flower", "tree", "shrub", "vine", "grass", "fern",
+      "succulent", "houseplant", "groundcover", "aquatic", "cover-crop"]
   },
   {
-    farming: farmingHabit,
-    flowers: { column: "plant_habit" },
-    key: "plant_habit",
+    from: "habit",
+    key: "habit",
     label: "Plant type",
-    options: ["Herb/Forb", "Shrub", "Tree", "Vine", "Cactus/Succulent", "Grass/Grass-like"]
+    labels: { "cactus/succulent": "Cactus/Succulent", "herb/forb": "Herb/Forb" },
+    values: ["herb/forb", "shrub", "tree", "vine", "grass", "fern", "cactus/succulent", "bulb", "aquatic"]
   },
-  { flowers: { column: "flower_group" }, key: "flower_group", label: "Group", options: [] },
   {
-    farming: farmingLifeCycle,
-    flowers: { column: "life_cycle" },
+    from: "life_cycle",
     key: "life_cycle",
     label: "Life cycle",
-    options: ["Annual", "Biennial", "Perennial"]
+    values: ["annual", "biennial", "perennial"]
   },
   {
-    farming: { column: "season", values: { cool: "Cool season", warm: "Warm season" } },
+    from: "season",
     key: "season",
     label: "Growing season",
-    options: ["Cool season", "Warm season"]
+    labels: { cool: "Cool season", warm: "Warm season" },
+    values: ["cool", "warm"]
   },
   {
-    farming: {
-      column: "sun",
-      values: { full: "Full sun", partial: "Part shade", shade: "Full shade" }
-    },
-    flowers: {
-      column: "sun_requirements",
-      values: {
-        "full shade": "Full shade",
-        "full sun": "Full sun",
-        "full sun to partial shade": ["Full sun", "Part shade"],
-        "partial or dappled shade": "Part shade",
-        "partial shade to full shade": ["Part shade", "Full shade"]
-      }
-    },
+    from: "sun",
     key: "sun",
     label: "Sun",
-    options: ["Full sun", "Part shade", "Full shade"]
+    labels: { full: "Full sun", partial: "Part shade", shade: "Full shade" },
+    values: ["full", "partial", "shade"]
   },
+  { from: "water", key: "water", label: "Water", values: ["low", "moderate", "high"] },
   {
-    farming: { column: "water", values: { high: "High", low: "Low", moderate: "Moderate" } },
-    key: "water",
-    label: "Water",
-    options: ["Low", "Moderate", "High"]
-  },
-  {
-    farming: {
-      column: "frost_tolerance",
-      values: { "half-hardy": "Half-hardy", "hardy": "Hardy", "tender": "Tender" }
-    },
+    from: "frost_tolerance",
     key: "frost_tolerance",
     label: "Frost tolerance",
-    options: ["Hardy", "Half-hardy", "Tender"]
+    values: ["hardy", "half-hardy", "tender"]
   },
   {
-    farming: {
-      column: "sow_method",
-      values: {
-        "bulb": "Bulb",
-        "cutting": "Cutting",
-        "direct": "Direct sow",
-        "division": "Division",
-        "indoor-start": "Start indoors",
-        "transplant": "Transplant",
-        "tuber": "Tuber"
-      }
-    },
-    flowers: {
-      column: ["propagation_seeds", "propagation_other_methods"],
-      values: {
-        "bulbs": "Bulb",
-        "cuttings": "Cutting",
-        "division": "Division",
-        "sow in situ": "Direct sow",
-        "start indoors": "Start indoors"
-      }
-    },
-    key: "sow_method",
+    from: "sow_methods",
+    key: "sow_methods",
     label: "Planting method",
-    options: ["Direct sow", "Start indoors", "Transplant", "Division", "Cutting", "Bulb", "Tuber"]
+    labels: { "direct": "Direct sow", "indoor-start": "Start indoors" },
+    values: ["direct", "indoor-start", "transplant", "division", "cutting", "bulb", "tuber"]
   },
   {
-    flowers: { column: "flower_time" },
-    key: "flower_time",
+    from: "soil_types",
+    key: "soil_types",
+    label: "Soil",
+    values: ["sandy", "loamy", "clay", "chalky", "rocky", "well-drained", "moist", "wet", "acidic", "alkaline"]
+  },
+  {
+    from: "bloom_seasons",
+    key: "bloom_seasons",
     label: "Bloom time",
-    options: [
-      "Late winter or early spring",
-      "Spring",
-      "Late spring or early summer",
-      "Summer",
-      "Late summer or early fall",
-      "Fall",
-      "Late fall or early winter",
-      "Winter",
-      "Year Round"
-    ]
+    values: ["late winter", "spring", "early summer", "summer", "late summer", "fall", "winter", "year-round"]
   },
   {
-    flowers: { column: "flower_color" },
-    key: "flower_color",
+    from: "flower_colors",
+    key: "flower_colors",
     label: "Flower color",
-    options: [
-      "White",
-      "Pink",
-      "Red",
-      "Orange",
-      "Yellow",
-      "Green",
-      "Blue",
-      "Lavender",
-      "Purple",
-      "Mauve",
-      "Brown",
-      "Bi-Color",
-      "Multi-Color"
-    ]
+    labels: { bicolor: "Bi-color" },
+    values: ["white", "cream", "yellow", "orange", "red", "pink", "magenta", "purple", "lavender", "blue",
+      "green", "brown", "black", "bicolor"]
   },
   {
-    flowers: { column: "bloom_size" },
-    key: "bloom_size",
-    label: "Bloom size",
-    options: ["Under 1\"", "1\"-2\"", "2\"-3\"", "3\"-4\"", "4\"-5\"", "5\"-6\"", "6\"-12\"", "Over 12\""]
-  },
-  {
-    flowers: { column: "flowers" },
-    key: "flowers",
-    label: "Flowers",
-    options: ["Showy", "Fragrant", "Inconspicuous", "Malodorous", "Blooms on old wood", "Blooms on new wood"]
-  },
-  {
-    flowers: { column: "leaves" },
-    key: "leaves",
+    from: "foliage",
+    key: "foliage",
     label: "Foliage",
-    options: [
-      "Deciduous",
-      "Evergreen",
-      "Semi-evergreen",
-      "Good fall color",
-      "Unusual foliage color",
-      "Variegated",
-      "Fragrant",
-      "Glaucous",
-      "Broadleaf",
-      "Needled",
-      "Spring ephemeral"
-    ]
+    values: ["evergreen", "semi-evergreen", "deciduous", "herbaceous"]
   },
   {
-    flowers: { column: "fruit" },
-    key: "fruit",
-    label: "Fruit",
-    options: ["Showy", "Edible to birds", "Dehiscent"]
+    from: "ornamental_features",
+    key: "features",
+    label: "Features",
+    values: ["showy flowers", "fragrant flowers", "fragrant foliage", "colorful foliage", "variegated",
+      "fall color", "winter interest", "ornamental fruit", "ornamental bark"]
   },
   {
-    flowers: { column: "uses" },
+    from: "edible_parts",
+    key: "edible_parts",
+    label: "Edible parts",
+    values: ["fruit", "leaves", "roots", "tubers", "bulbs", "stems", "flowers", "seeds", "pods", "nuts", "sap"]
+  },
+  {
+    from: "uses",
     key: "uses",
     label: "Uses",
-    options: [
-      "Cut Flower",
-      "Dried Flower",
-      "Culinary Herb",
-      "Medicinal Herb",
-      "Salad greens",
-      "Cooked greens",
-      "Groundcover",
-      "Will Naturalize",
-      "Suitable as Annual",
-      "Provides winter interest",
-      "Flowering Tree",
-      "Shade Tree",
-      "Windbreak or Hedge",
-      "Erosion control",
-      "Suitable for miniature gardens",
-      "Water gardens",
-      "Guardian plant",
-      "Suitable for forage",
-      "Useful for timber production",
-      "Dye production"
-    ]
+    values: ["culinary", "medicinal", "ornamental", "cut flower", "dried flower", "hedge", "screen", "windbreak",
+      "groundcover", "erosion control", "container", "houseplant", "rock garden", "rain garden", "water garden",
+      "xeriscape", "pollinator garden", "cover crop", "forage", "shade tree", "street tree", "naturalizing", "dye"]
   },
   {
-    flowers: { column: "wildlife_attractant" },
-    key: "wildlife_attractant",
+    from: "wildlife",
+    key: "wildlife",
     label: "Attracts",
-    options: ["Bees", "Butterflies", "Hummingbirds", "Birds", "Other Beneficial Insects"]
+    labels: { "caterpillar host": "Caterpillar host plant" },
+    values: ["bees", "butterflies", "hummingbirds", "birds", "moths", "beneficial insects", "caterpillar host"]
   },
   {
-    flowers: { column: "resistances" },
+    from: "resistances",
     key: "resistances",
     label: "Resistances",
-    options: [
-      "Deer Resistant",
-      "Rabbit Resistant",
-      "Drought tolerant",
-      "Humidity tolerant",
-      "Salt tolerant",
-      "Powdery Mildew",
-      "Gophers/Voles",
-      "Squirrels",
-      "Birds",
-      "Tolerates dry shade",
-      "Pollution",
-      "Flood Resistant",
-      "Fire Resistant",
-      "Tolerates foot traffic"
-    ]
+    labels: {
+      "deer": "Deer resistant",
+      "disease": "Disease resistant",
+      "drought": "Drought tolerant",
+      "dry shade": "Tolerates dry shade",
+      "foot traffic": "Tolerates foot traffic",
+      "heat": "Heat tolerant",
+      "humidity": "Humidity tolerant",
+      "juglone": "Juglone tolerant",
+      "pests": "Pest resistant",
+      "pollution": "Pollution tolerant",
+      "powdery mildew": "Mildew resistant",
+      "rabbit": "Rabbit resistant",
+      "salt": "Salt tolerant",
+      "wet soil": "Tolerates wet soil"
+    },
+    values: ["deer", "rabbit", "drought", "heat", "humidity", "salt", "pollution", "juglone", "foot traffic",
+      "wet soil", "dry shade", "powdery mildew", "disease", "pests"]
   },
   {
-    flowers: { column: "suitable_locations" },
-    key: "suitable_locations",
-    label: "Suitable for",
-    options: [
-      "Xeriscapic",
-      "Houseplant",
-      "Patio/Ornamental/Small Tree",
-      "Street Tree",
-      "Espalier",
-      "Topiary",
-      "Beach Front",
-      "Alpine Gardening",
-      "Bog gardening",
-      "Terrariums"
-    ]
-  },
-  {
-    flowers: { column: "containers" },
-    key: "containers",
-    label: "Containers",
-    options: [
-      "Suitable in 1 gallon",
-      "Suitable in 3 gallon or larger",
-      "Suitable for hanging baskets",
-      "Needs excellent drainage in pots",
-      "Needs repotting every 2 to 3 years",
-      "Prefers to be under-potted",
-      "Not suitable for containers"
-    ]
-  },
-  {
-    flowers: { column: "soil_pH_preferences" },
-    key: "soil_pH_preferences",
-    label: "Soil pH",
-    options: [
-      "Very strongly acid",
-      "Strongly acid",
-      "Moderately acid",
-      "Slightly acid",
-      "Neutral",
-      "Slightly alkaline",
-      "Moderately alkaline"
-    ]
-  },
-  {
-    flowers: { column: "miscellaneous" },
-    key: "miscellaneous",
-    label: "Traits",
-    options: [
-      "Tolerates poor soil",
-      "Goes Dormant",
-      "With thorns/spines/prickles/teeth",
-      "Carnivorous",
-      "Monocarpic",
-      "Monoecious",
-      "Dioecious"
-    ]
+    from: (row) => [
+      ...(row.container_suitable === true ? ["containers"] : []),
+      ...(row.indoor_suitable === true ? ["indoors"] : [])
+    ],
+    key: "suitable_for",
+    label: "Grows well in",
+    values: ["containers", "indoors"]
   }
 ];
 
-// Lowercased raw value -> options, per facet source
-const LOOKUPS = new Map<FacetSource, Map<string, string[]>>();
-for (const definition of FACET_DEFINITIONS) {
-  for (const from of [definition.farming, definition.flowers]) {
-    if (!from || typeof from === "function") continue;
-    const entries: [string, string | string[]][] = from.values
-      ? Object.entries(from.values)
-      : definition.options.map((option) => [option.toLowerCase(), option]);
-    LOOKUPS.set(from, new Map(entries.map(([raw, options]) => [raw, [options].flat()])));
-  }
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-// "Neutral (6.6 – 7.3), Bi-Color: pink/white" -> ["neutral", "bi-color"]
-function splitValues(raw: string): string[] {
-  return raw
-    .split(/,(?![^()]*\))/)
-    .map((token) => token.replace(/\([^)]*\)/g, "").split(":")[0].trim().toLowerCase())
-    .filter(Boolean);
+const LABELS = new Map(FACET_DEFINITIONS.map((definition) => [
+  definition.key,
+  new Map(definition.values.map((raw) => [raw, definition.labels?.[raw] ?? capitalize(raw)]))
+]));
+
+// Display label for a raw column value, e.g. ("sun", "partial") -> "Part shade"
+export function facetLabel(key: FacetKey, raw: string): string {
+  return LABELS.get(key)?.get(raw) ?? capitalize(raw);
 }
 
-function sourceValues(from: FacetSource, key: FacetKey, row: Row): string[] {
+function rawValues(from: FacetDefinition["from"], row: Row): string[] {
   if (typeof from === "function") return from(row);
-
-  const lookup = LOOKUPS.get(from)!;
-  const values = new Set<string>();
-  for (const column of [from.column].flat()) {
-    const raw = row[column];
-    if (typeof raw !== "string" || !raw.trim()) continue;
-
-    if (key === "flower_group") {
-      values.add(raw.trim().toLowerCase());
-      continue;
-    }
-    for (const token of splitValues(raw)) {
-      lookup.get(token)?.forEach((option) => values.add(option));
-    }
-  }
-  return [...values];
+  const value = row[from];
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
+  return typeof value === "string" && value ? [value] : [];
 }
 
-export function extractFacets(source: PlantSource, row: Row): PlantFacets {
+export function extractFacets(row: Row): PlantFacets {
   const facets: PlantFacets = {};
-
   for (const definition of FACET_DEFINITIONS) {
-    const from = definition[source];
-    if (!from) continue;
-    const values = sourceValues(from, definition.key, row);
+    const labels = LABELS.get(definition.key)!;
+    // Values outside the vocabulary are ignored
+    const values = rawValues(definition.from, row).flatMap((raw) => labels.get(raw) ?? []);
     if (values.length) facets[definition.key] = values;
   }
-
   return facets;
 }
 
@@ -491,49 +250,22 @@ export function buildFacets(plants: { facets: PlantFacets }[]): Facet[] {
     }
   }
 
-  return FACET_DEFINITIONS.map(({ key, label, options }) => {
+  return FACET_DEFINITIONS.map(({ key, label }) => {
     const found = present.get(key) ?? new Set<string>();
-    return {
-      key,
-      label,
-      options: key === "flower_group" ? [...found].sort() : options.filter((option) => found.has(option))
-    };
+    return { key, label, options: [...LABELS.get(key)!.values()].filter((option) => found.has(option)) };
   }).filter((facet) => facet.options.length > 0);
 }
 
-// "morning-glories" -> "Morning glories"
-export function formatGroup(group: string): string {
-  const words = group.replace(/-/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-export function formatOption(key: FacetKey, value: string): string {
-  return key === "flower_group" ? formatGroup(value) : value;
-}
-
-// "Zone 4a -34.4 °C ..." -> "4a", "Zone 3 -40 °C ..." -> "3"
-export function parseZone(value: string): string | null {
-  const match = value.trim().match(/^(?:zone\s+)?(\d{1,2})([ab])?/i);
-  if (!match) return null;
-  return match[1] + (match[2]?.toLowerCase() ?? "");
-}
-
 export interface PlantZone {
-  // Flowers: minimum cold hardiness, e.g. "4a"
-  hardiness_zone: string | null;
-  // Farming: whole-number USDA range the plant grows in
+  // Whole-number USDA range the plant grows in
   zone_range: [number, number] | null;
 }
 
-// Flowers match their zone exactly, and a zone without a/b ("3") matches both
-// halves. Farming plants match any zone inside their range.
+// A plant matches any zone inside its range; "6b" counts as zone 6
 export function matchesZone(plant: PlantZone, selected: string): boolean {
-  if (plant.zone_range) {
-    const zone = parseInt(selected, 10);
-    return zone >= plant.zone_range[0] && zone <= plant.zone_range[1];
-  }
-  if (!plant.hardiness_zone) return false;
-  return plant.hardiness_zone === selected || plant.hardiness_zone === selected.replace(/[ab]$/, "");
+  if (!plant.zone_range) return false;
+  const zone = parseInt(selected, 10);
+  return zone >= plant.zone_range[0] && zone <= plant.zone_range[1];
 }
 
 export const HARDINESS_ZONES = Array.from({ length: 13 }, (_, i) => [`${i + 1}a`, `${i + 1}b`]).flat();

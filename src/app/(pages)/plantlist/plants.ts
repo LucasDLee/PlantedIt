@@ -1,7 +1,6 @@
-import { extractFacets, formatGroup, parseZone } from "./facets";
+import { extractFacets, facetLabel } from "./facets";
 import type { Plant } from "./components/plant-card";
-import { getAllFlowers } from "@/src/services/flowers.service";
-import { getFoodList } from "@/src/services/farming.service";
+import { getPlantList } from "@/src/services/plants.service";
 
 type Row = Record<string, unknown>;
 
@@ -44,41 +43,33 @@ function capitalize(value: string | null): string | null {
   return value && value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function fromFlower(row: Row): Plant {
-  const hardiness = text(row.minimum_cold_hardiness);
-  const zone = hardiness && parseZone(hardiness);
-  const group = text(row.flower_group);
+const MAX_ZONE = 13;
 
-  return {
-    details: details([
-      // "Full Sun, Full Sun to Partial Shade" -> "Full Sun"
-      ["Sun", text(row.sun_requirements)?.split(",")[0].trim()],
-      ["Life cycle", text(row.life_cycle)],
-      ["Height", text(row.plant_height)],
-      ["Color", text(row.flower_color)]
-    ]),
-    facets: extractFacets("flowers", row),
-    group: group && formatGroup(group),
-    hardiness_zone: zone,
-    name: text(row.flower_name) ?? "Unnamed plant",
-    scientific_name: null,
-    url: text(row.url),
-    uuid: String(row.uuid),
-    zone_label: zone ? `Zone ${zone}` : null,
-    zone_range: null
-  };
+// A plant with only one end of its range known (e.g. coldest zone) is open-ended
+function zoneRange(min: number | null, max: number | null): [number, number] | null {
+  if (min === null && max === null) return null;
+  return [min ?? 1, max ?? MAX_ZONE];
 }
 
-function fromFarming(row: Row): Plant {
-  const facets = extractFacets("farming", row);
+function zoneLabel(min: number | null, max: number | null): string | null {
+  if (min === null && max === null) return null;
+  if (max === null) return `Zones ${min}+`;
+  if (min === null) return `Zones 1–${max}`;
+  return min === max ? `Zone ${min}` : `Zones ${min}–${max}`;
+}
+
+function fromPlant(row: Row): Plant {
+  const facets = extractFacets(row);
   const zoneMin = num(row.usda_zone_min);
   const zoneMax = num(row.usda_zone_max);
-  const zoneRange: [number, number] | null =
-    zoneMin !== null && zoneMax !== null ? [zoneMin, zoneMax] : null;
+  const scientific = text(row.scientific_name);
+  const habit = text(row.habit);
+  // Many iNaturalist common names are lowercase ("tomato")
+  const name = capitalize(text(row.common_name)) ?? scientific ?? "Unnamed plant";
 
   return {
     details: details([
-      ["Type", capitalize(text(row.subcategory))],
+      ["Type", capitalize(text(row.subcategory)) ?? (habit && facetLabel("habit", habit))],
       ["Sun", facets.sun?.[0]],
       ["Water", facets.water?.[0]],
       ["Height", height(num(row.height_in_min), num(row.height_in_max))],
@@ -86,21 +77,20 @@ function fromFarming(row: Row): Plant {
     ]),
     facets,
     group: facets.category?.[0] ?? null,
-    hardiness_zone: null,
-    name: text(row.common_name) ?? "Unnamed plant",
-    scientific_name: text(row.scientific_name),
-    url: null,
+    name,
+    scientific_name: scientific !== name ? scientific : null,
+    url: text(row.wikipedia_url),
     uuid: String(row.uuid),
-    zone_label: zoneRange ? `Zones ${zoneRange[0]}–${zoneRange[1]}` : null,
-    zone_range: zoneRange
+    zone_label: zoneLabel(zoneMin, zoneMax),
+    zone_range: zoneRange(zoneMin, zoneMax)
   };
 }
 
-const collator = new Intl.Collator("en", { sensitivity: "base" });
+// Ignores punctuation so names like "'ohelo" sort under O, not before A
+const collator = new Intl.Collator("en", { ignorePunctuation: true, sensitivity: "base" });
 
-// Both tables as one alphabetical list
+// One card per species, alphabetical
 export async function getAllPlants(): Promise<Plant[]> {
-  const [flowers, farming] = await Promise.all([getAllFlowers(), getFoodList()]);
-  return [...flowers.map(fromFlower), ...farming.map(fromFarming)]
-    .sort((a, b) => collator.compare(a.name, b.name));
+  const rows = await getPlantList();
+  return rows.map(fromPlant).sort((a, b) => collator.compare(a.name, b.name));
 }
