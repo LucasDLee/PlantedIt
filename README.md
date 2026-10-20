@@ -3,7 +3,7 @@ A web app to find the best plants for starting your garden based on your locatio
 
 This was built with Next.js and Tailwind for server-side rendering to protect the API keys and custom components.
 
-AI was only used to give advice on the tech stack, and troubleshoot and diagnose bugs.
+![home page](/public/home_page.png)
 
 ## Resources
 
