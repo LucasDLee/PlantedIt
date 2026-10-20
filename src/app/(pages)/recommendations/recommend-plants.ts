@@ -2,7 +2,7 @@ import { HARDINESS_ZONES, facetLabel, matchesZone } from "../plantlist/facets";
 import type { Plant } from "../plantlist/components/plant-card";
 import type { SearchParams } from "../plantlist/filter-plants";
 
-// Preferences live in the URL: ?zone=6b&sun=Full+sun&space=container&grow=Vegetable&grow=Herb
+// Preferences live in the URL: ?zone=6b&region=US-OR&sun=Full+sun&space=container&grow=Vegetable&grow=Herb
 export const SHOWN = 24;
 
 export const SPACES = ["garden", "container", "indoors"] as const;
@@ -14,6 +14,8 @@ export const GROW_OPTIONS = ["vegetable", "fruit", "berry", "herb", "flower", "t
 
 export interface Preferences {
   grow: string[];
+  // ISO 3166 code for where the garden is ("US-OR", or just "NZ"), to rule out invasive plants
+  region: string;
   // Southern hemisphere seasons run six months off the northern ones
   south: boolean;
   space: Space;
@@ -32,13 +34,17 @@ function list(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
+const REGION = /^[A-Z]{2}(-[A-Z0-9]{1,3})?$/;
+
 export function parsePreferences(params: SearchParams): Preferences {
+  const region = list(params.region)[0] ?? "";
   const zone = list(params.zone)[0] ?? "";
   const sun = list(params.sun)[0] ?? "";
   const space = list(params.space)[0] as Space;
 
   return {
     grow: list(params.grow).filter((value) => GROW_OPTIONS.includes(value)),
+    region: REGION.test(region) ? region : "",
     south: list(params.south)[0] === "1",
     space: SPACES.includes(space) ? space : "garden",
     sun: SUN_OPTIONS.includes(sun) ? sun : "",
@@ -49,6 +55,7 @@ export function parsePreferences(params: SearchParams): Preferences {
 export function toSearch(prefs: Preferences): string {
   const params = new URLSearchParams();
   if (prefs.zone) params.set("zone", prefs.zone);
+  if (prefs.region) params.set("region", prefs.region);
   if (prefs.south) params.set("south", "1");
   if (prefs.sun) params.set("sun", prefs.sun);
   if (prefs.space !== "garden") params.set("space", prefs.space);

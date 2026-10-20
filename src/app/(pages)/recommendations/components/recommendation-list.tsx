@@ -5,8 +5,10 @@ import { type ReactNode, useCallback, useEffect, useOptimistic, useTransition } 
 import { getPreferences, savePreferences } from "@/src/lib/storage/preferences";
 import { usePathname, useRouter } from "next/navigation";
 import { HARDINESS_ZONES } from "../../plantlist/facets";
+import type { InvasiveCheck } from "../invasive";
 import Link from "next/link";
 import PlantCard from "../../plantlist/components/plant-card";
+import { getRegion } from "@/src/lib/storage/locations";
 import { getZone } from "@/src/lib/storage/zone";
 
 const SPACE_LABELS: Record<Space, string> = { container: "Containers", garden: "Garden bed", indoors: "Indoors" };
@@ -43,13 +45,29 @@ function Question({ children, label }: { children: ReactNode; label: string }) {
   );
 }
 
+function InvasiveNote({ check }: { check: InvasiveCheck | null }) {
+  if (!check) {
+    return (
+      <>
+        <Link href="/" className="font-semibold text-primary hover:text-primary-strong">Drop a pin on the map</Link>
+        {" "}to leave out plants that are invasive where you live.
+      </>
+    );
+  }
+  if (!check.place) return "There's no invasive species list for your area yet, so check local guidance before planting.";
+  if (!check.hidden) return `None of these are listed as invasive in ${check.place}.`;
+  return `Left out ${check.hidden.toLocaleString()} ${check.hidden === 1 ? "plant" : "plants"} listed as invasive in ${check.place}.`;
+}
+
 export default function RecommendationList({
   frost,
+  invasive,
   prefs,
   recommendations,
   total
 }: {
   frost: string | null;
+  invasive: InvasiveCheck | null;
   prefs: Preferences;
   recommendations: Recommendation[];
   total: number;
@@ -73,14 +91,20 @@ export default function RecommendationList({
     apply(next);
   };
 
-  // Fill in the saved zone and answers on a fresh visit; a shared link keeps its own
+  // Fill in the saved zone and answers on a fresh visit; a shared link keeps its own. Invasiveness
+  // is about where the viewer gardens, so a link without a region picks up theirs.
   useEffect(() => {
-    if (prefs.zone) return;
+    const region = prefs.region || getRegion();
+    if (prefs.zone) {
+      if (region !== prefs.region) apply({ ...prefs, region });
+      return;
+    }
     const zone = getZone();
     const saved = getPreferences();
-    if (!zone && !saved) return;
+    if (!zone && !saved && !region) return;
     apply({
       grow: saved?.grow ?? prefs.grow,
+      region,
       south: zone ? zone.lat < 0 : prefs.south,
       space: saved?.space ?? prefs.space,
       sun: saved?.sun ?? prefs.sun,
@@ -160,6 +184,7 @@ export default function RecommendationList({
                 Browse every plant for zone {current.zone} →
               </Link>
             </div>
+            {!isPending && <p className="mt-1 text-xs text-muted"><InvasiveNote check={invasive} /></p>}
 
             {total === 0 ? (
               <p className="mt-12 text-muted">No plants match your answers. Try loosening one of them.</p>

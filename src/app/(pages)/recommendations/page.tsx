@@ -3,10 +3,11 @@ import PageHeading from "@/src/components/page-heading";
 import RecommendationList from "./components/recommendation-list";
 import type { SearchParams } from "../plantlist/filter-plants";
 import { getAllPlants } from "../plantlist/plants";
+import { removeInvasive } from "./invasive";
 
 export default async function Recommendations({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const prefs = parsePreferences(await searchParams);
-  const results = recommendPlants(await getAllPlants(), prefs);
+  const { check, results } = removeInvasive(recommendPlants(await getAllPlants(), prefs), prefs.region);
 
   const frost = prefs.zone ? estimateFrost(prefs.zone) : null;
   const frostNote = !prefs.zone
@@ -23,6 +24,7 @@ export default async function Recommendations({ searchParams }: { searchParams: 
       {/* Only the top picks are sent to the client */}
       <RecommendationList
         frost={frostNote}
+        invasive={check}
         prefs={prefs}
         recommendations={results.slice(0, SHOWN)}
         total={results.length}

@@ -62,6 +62,12 @@ function getLocation(): SavedLocation {
   }
 }
 
+// ISO 3166 code for the saved location's state or province, or just its country ("US-OR", "NZ")
+function getRegion(): string {
+  const address = getLocation().data.address;
+  return (address["ISO3166-2-lvl4"] ?? address.country_code ?? "").toUpperCase();
+}
+
 function saveLocation(location: SavedLocation): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
   localStorage.removeItem(LEGACY_STORAGE_KEY);
@@ -73,4 +79,4 @@ function clearLocation(): void {
   notifyChange();
 }
 
-export { clearLocation, saveLocation, getLocation };
+export { clearLocation, saveLocation, getLocation, getRegion };
