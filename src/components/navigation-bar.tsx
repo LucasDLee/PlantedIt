@@ -21,6 +21,10 @@ export default function NavigationBar() {
     //   name: "Map"
     // },
     {
+      href: "/recommendations",
+      name: "Recommendations"
+    },
+    {
       href: "/plantlist",
       name: "Plant List"
     },
