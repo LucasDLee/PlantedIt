@@ -64,6 +64,8 @@ function fromPlant(row: Row): Plant {
   const zoneMax = num(row.usda_zone_max);
   const scientific = text(row.scientific_name);
   const habit = text(row.habit);
+  const maturityMin = num(row.maturity_days_min);
+  const maturityMax = num(row.maturity_days_max);
   // Many iNaturalist common names are lowercase ("tomato")
   const name = capitalize(text(row.common_name)) ?? scientific ?? "Unnamed plant";
 
@@ -73,10 +75,11 @@ function fromPlant(row: Row): Plant {
       ["Sun", facets.sun?.[0]],
       ["Water", facets.water?.[0]],
       ["Height", height(num(row.height_in_min), num(row.height_in_max))],
-      ["Maturity", maturity(num(row.maturity_days_min), num(row.maturity_days_max))]
+      ["Maturity", maturity(maturityMin, maturityMax)]
     ]),
     facets,
     group: facets.category?.[0] ?? null,
+    maturity_days: maturityMax ?? maturityMin,
     name,
     scientific_name: scientific !== name ? scientific : null,
     url: text(row.wikipedia_url),

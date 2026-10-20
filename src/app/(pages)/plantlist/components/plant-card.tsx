@@ -5,6 +5,8 @@ export interface Plant extends PlantZone {
   details: [string, string][];
   facets: PlantFacets;
   group: string | null;
+  // Longest days to maturity, for checking a crop ripens before frost
+  maturity_days: number | null;
   name: string;
   scientific_name: string | null;
   url: string | null;
@@ -12,7 +14,8 @@ export interface Plant extends PlantZone {
   zone_label: string | null;
 }
 
-export default function PlantCard({ plant }: { plant: Plant }) {
+// `reasons` explains why a recommended plant was picked
+export default function PlantCard({ plant, reasons }: { plant: Plant; reasons?: string[] }) {
   return (
     <article className="flex flex-col rounded-lg bg-surface p-5 transition-colors hover:bg-tint">
       <div className="flex flex-wrap gap-2">
@@ -33,6 +36,17 @@ export default function PlantCard({ plant }: { plant: Plant }) {
       </h2>
       {plant.scientific_name && (
         <p className="mt-0.5 text-sm italic text-muted">{plant.scientific_name}</p>
+      )}
+
+      {reasons && reasons.length > 0 && (
+        <ul className="mt-3 space-y-1 text-sm">
+          {reasons.map((reason) => (
+            <li key={reason} className="flex gap-2 text-primary-strong">
+              <span className="text-primary" aria-hidden>✓</span>
+              {reason}
+            </li>
+          ))}
+        </ul>
       )}
 
       <dl className="mt-4 divide-y divide-line text-sm">

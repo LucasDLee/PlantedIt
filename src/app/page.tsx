@@ -44,12 +44,20 @@ export default function Home() {
             ))}
           </ol>
 
-          <Link
-            href="/plantlist"
-            className="mt-10 self-start rounded-md bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong"
-          >
-            Browse all plants
-          </Link>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link
+              href="/recommendations"
+              className="rounded-md bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong"
+            >
+              Get recommendations
+            </Link>
+            <Link
+              href="/plantlist"
+              className="rounded-md bg-surface px-5 py-3 text-sm font-semibold text-primary-strong transition-colors hover:bg-tint"
+            >
+              Browse all plants
+            </Link>
+          </div>
         </div>
 
         <div className="h-[420px] overflow-hidden rounded-lg bg-tint lg:col-span-7 lg:h-auto lg:min-h-[500px]">
